@@ -35,7 +35,7 @@ class Specification(ormar.Model):
 
 class TestRun(ormar.Model):
     class Meta(BaseMeta):
-        tablename = "test_runs"
+        tablename = "testruns"
 
     id: int = ormar.Integer(primary_key=True)
     short_code: str = ormar.String(max_length=4)

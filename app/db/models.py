@@ -15,7 +15,7 @@ class Project(ormar.Model):
     class Meta(BaseMeta):
         tablename = "projects"
 
-    id: int = ormar.Integer(primary_key=True)
+    id: Optional[int] = ormar.Integer(primary_key=True)
     number: int = ormar.Integer()
     name: str = ormar.Text()
 

@@ -2,9 +2,16 @@ import uvicorn
 from fastapi import FastAPI
 
 from . import db
-from .routers import testruns, projects, specifications, measurement_columns, measurement_entries, forcing_condition
+from .routers import (
+    testruns,
+    projects,
+    specifications,
+    measurement_columns,
+    measurement_entries,
+    forcing_condition,
+)
 
-description="""
+description = """
 EDeA MS helps you to consistently store and query data from test runs of your electronics projects.
 """
 
@@ -14,8 +21,8 @@ app = FastAPI(
     version="0.1.0",
     license_info={
         "name": "EUPL 1.2",
-        "url": "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"
-    }
+        "url": "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12",
+    },
 )
 app.state.database = db.database
 app.include_router(testruns.router)

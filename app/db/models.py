@@ -1,88 +1,98 @@
 from datetime import datetime
-from typing import Optional
 
-import ormar
+from ormar import (
+    Integer,
+    ForeignKey,
+    Text,
+    Float,
+    Model,
+    ModelMeta,
+    DateTime,
+    JSON,
+    String,
+)
+from sqlalchemy import func
 
 from ..db import metadata, database
 
 
-class BaseMeta(ormar.ModelMeta):
+class BaseMeta(ModelMeta):
     metadata = metadata
     database = database
 
 
-class Project(ormar.Model):
+class Project(Model):
     class Meta(BaseMeta):
         tablename = "projects"
 
-    id: Optional[int] = ormar.Integer(primary_key=True)
-    number: int = ormar.Integer()
-    name: str = ormar.Text()
+    id: int | None = Integer(primary_key=True)
+    number: int = Integer()
+    name: str = Text()
 
 
-class Specification(ormar.Model):
+class Specification(Model):
     class Meta(BaseMeta):
         tablename = "specifications"
 
-    id: int = ormar.Integer(primary_key=True)
-    project: Optional[Project] = ormar.ForeignKey(Project)
-    name: str = ormar.Text()
-    unit: str = ormar.Text()
-    minimum: float = ormar.Float()
-    typical: float = ormar.Float()
-    maximum: float = ormar.Float()
+    id: int = Integer(primary_key=True)
+    project: Project | None = ForeignKey(Project)
+    name: str = Text()
+    unit: str = Text()
+    minimum: float = Float()
+    typical: float = Float()
+    maximum: float = Float()
 
 
-class TestRun(ormar.Model):
+class TestRun(Model):
     class Meta(BaseMeta):
         tablename = "testruns"
 
-    id: int = ormar.Integer(primary_key=True)
-    short_code: str = ormar.String(max_length=4)
-    dut_id: str = ormar.Text()
-    machine_hostname: str = ormar.Text()
-    user_name: str = ormar.Text()
-    test_name: str = ormar.Text()
-    project: Optional[Project] = ormar.ForeignKey(Project)
-    metadata: dict = ormar.JSON()
+    id: int | None = Integer(primary_key=True)
+    short_code: str = String(max_length=4)
+    dut_id: str = Text()
+    machine_hostname: str = Text()
+    user_name: str = Text()
+    test_name: str = Text()
+    project: Project | None = ForeignKey(Project)
+    metadata: dict = JSON()
 
 
-class MeasurementEntry(ormar.Model):
-    class Meta(BaseMeta):
-        tablename = "measurement_entries"
-
-    id: int = ormar.Integer(primary_key=True)
-    sequence_number: int = ormar.Integer()
-    test_run_id: int = ormar.Integer()
-    column_id: int = ormar.Integer()
-    numeric_value: float = ormar.Float()
-    string_value: str = ormar.Text()
-    created_at: datetime = ormar.Time()
-    flags: int = ormar.Integer()
-
-
-class MeasurementColumn(ormar.Model):
+class MeasurementColumn(Model):
     class Meta(BaseMeta):
         tablename = "measurement_columns"
 
-    id: int = ormar.Integer(primary_key=True)
-    data_source: str = ormar.Text()
-    project: Optional[Project] = ormar.ForeignKey(Project)
-    name: str = ormar.Text()
-    description: str = ormar.Text()
-    user_note: str = ormar.Text()
-    spec: Optional[Specification] = ormar.ForeignKey(Specification)
-    measurement_unit: str = ormar.Text()
-    flags: int = ormar.Integer()
+    id: int | None = Integer(primary_key=True)
+    name: str = Text()
+    project: Project | None = ForeignKey(Project)
+    spec: Specification | None = ForeignKey(Specification)
+    data_source: str | None = Text(default="")
+    description: str | None = Text(default="")
+    user_note: str | None = Text(default="")
+    measurement_unit: str | None = Text(default="")
+    flags: int | None = Integer(default=0)
 
 
-class ForcingCondition(ormar.Model):
+class MeasurementEntry(Model):
+    class Meta(BaseMeta):
+        tablename = "measurement_entries"
+
+    id: int | None = Integer(primary_key=True)
+    sequence_number: int = Integer()
+    testrun: TestRun | None = ForeignKey(TestRun, nullable=False)
+    column: MeasurementColumn | None = ForeignKey(MeasurementColumn, nullable=False)
+    numeric_value: float | None = Float(default=None, nullable=True)
+    string_value: str | None = Text(default=None, nullable=True)
+    created_at: datetime = DateTime(server_default=func.now())
+    flags: int | None = Integer(default=0)
+
+
+class ForcingCondition(Model):
     class Meta(BaseMeta):
         tablename = "forcing_conditions"
 
-    id: int = ormar.Integer(primary_key=True)
-    sequence_number: int = ormar.Integer()
-    column: Optional[MeasurementColumn] = ormar.ForeignKey(MeasurementColumn)
-    numeric_value: float = ormar.Float()
-    string_value: str = ormar.Text()
-    test_run: Optional[TestRun] = ormar.ForeignKey(TestRun)
+    id: int = Integer(primary_key=True)
+    sequence_number: int = Integer()
+    column: MeasurementColumn | None = ForeignKey(MeasurementColumn)
+    numeric_value: float = Float()
+    string_value: str = Text()
+    testrun: TestRun | None = ForeignKey(TestRun)

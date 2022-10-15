@@ -1,5 +1,8 @@
+import enum
+import os
 from datetime import datetime
 
+import sqlalchemy
 from ormar import (
     Integer,
     ForeignKey,
@@ -9,11 +12,10 @@ from ormar import (
     ModelMeta,
     DateTime,
     JSON,
-    String,
 )
 from sqlalchemy import func
 
-from ..db import metadata, database
+from ..db import metadata, database, DATABASE_URL, default_db
 
 
 class BaseMeta(ModelMeta):
@@ -26,7 +28,7 @@ class Project(Model):
         tablename = "projects"
 
     id: int | None = Integer(primary_key=True)
-    number: int = Integer()
+    number: str = Text()
     name: str = Text()
 
 
@@ -48,13 +50,13 @@ class TestRun(Model):
         tablename = "testruns"
 
     id: int | None = Integer(primary_key=True)
-    short_code: str = String(max_length=4)
+    short_code: str = Text(unique=True)  # String(max_length=4)
     dut_id: str = Text()
     machine_hostname: str = Text()
     user_name: str = Text()
     test_name: str = Text()
     project: Project | None = ForeignKey(Project)
-    metadata: dict = JSON()
+    metadata: dict = JSON(default={})
 
 
 class MeasurementColumn(Model):
@@ -96,3 +98,39 @@ class ForcingCondition(Model):
     numeric_value: float = Float()
     string_value: str = Text()
     testrun: TestRun | None = ForeignKey(TestRun)
+
+
+class Setting(Model):
+    class Meta(BaseMeta):
+        tablename = "sysconfig"
+
+    key: str = Text(primary_key=True)
+    value: str = Text()
+
+
+class JobState(int, enum.Enum):
+    NEW = 1
+    PENDING = 2
+    COMPLETE = 3
+    FAILED = 4
+
+
+class JobQueue(Model):
+    class Meta(BaseMeta):
+        tablename = "jobqueue"
+
+    id: int = Integer(primary_key=True)
+    state: int = Integer(choices=list(JobState), default=JobState.NEW)
+    # state: JobState = sqlalchemy.Enum(enum_class=JobState)
+    worker: str = Text(default='N/A')
+    updated_at: datetime = DateTime(server_default=func.now())
+    function_call: str = Text()
+    parameters: dict = JSON(default={})
+
+
+# We can first create the db after the model has been defined.
+if DATABASE_URL == default_db:
+    dbfile = DATABASE_URL.replace('sqlite:///', '')
+    if not os.path.isfile(dbfile):
+        engine = sqlalchemy.create_engine(DATABASE_URL)
+        metadata.create_all(engine)

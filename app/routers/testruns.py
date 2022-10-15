@@ -7,16 +7,25 @@ from app.db.models import TestRun
 router = APIRouter()
 
 
-@router.get("/testruns/", response_model=List[TestRun], tags=["testrun"])
-async def get_testruns():
+@router.get("/testruns", response_model=List[TestRun], tags=["testrun"])
+async def get_all_testruns():
     items = await TestRun.objects.select_related("project").all()
     return items
 
 
-@router.post("/testruns/", response_model=TestRun, tags=["testrun"])
+@router.get("/testruns/short_code/{short_code}", response_model=List[TestRun], tags=["testrun"])
+async def get_specific_testrun(short_code):
+    item = await TestRun.objects.select_related("project").get(short_code=short_code)
+    return item
+
+
+@router.post("/testruns", response_model=TestRun, tags=["testrun"])
 async def create_testruns(run: TestRun):
-    await run.save()
-    return run
+    already_exist = await TestRun.objects.filter(short_code=run.short_code).exists()
+    if not already_exist:
+        await run.save()
+    entry = await TestRun.objects.get(short_code=run.short_code)
+    return entry
 
 
 @router.put("/testruns/{run_id}", tags=["testrun"])

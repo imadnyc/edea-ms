@@ -7,13 +7,13 @@ from app.db.models import MeasurementColumn
 router = APIRouter()
 
 
-@router.get("/measurement_columns/", response_model=List[MeasurementColumn], tags=["measurement_column"])
+@router.get("/measurement_columns", response_model=List[MeasurementColumn], tags=["measurement_column"])
 async def get_measurement_columns():
     items = await MeasurementColumn.objects.select_related("measurement_column").all()
     return items
 
 
-@router.post("/measurement_columns/", response_model=MeasurementColumn, tags=["measurement_column"])
+@router.post("/measurement_columns", response_model=MeasurementColumn, tags=["measurement_column"])
 async def create_measurement_columns(column: MeasurementColumn):
     await column.save()
     return column

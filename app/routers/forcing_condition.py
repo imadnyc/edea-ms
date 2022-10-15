@@ -7,13 +7,13 @@ from app.db.models import ForcingCondition
 router = APIRouter()
 
 
-@router.get("/forcing_conditions/", response_model=List[ForcingCondition], tags=["forcing_condition"])
+@router.get("/forcing_conditions", response_model=List[ForcingCondition], tags=["forcing_condition"])
 async def get_forcing_conditions():
     items = await ForcingCondition.objects.select_related("forcing_condition").all()
     return items
 
 
-@router.post("/forcing_conditions/", response_model=ForcingCondition, tags=["forcing_condition"])
+@router.post("/forcing_conditions", response_model=ForcingCondition, tags=["forcing_condition"])
 async def create_forcing_conditions(condition: ForcingCondition):
     await condition.save()
     return condition

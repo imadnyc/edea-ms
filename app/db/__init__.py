@@ -4,7 +4,9 @@ import sys
 import databases
 import sqlalchemy
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///edea-ms.db")
+dbfile = 'edea-ms.sqlite'
+default_db = f"sqlite:///{dbfile}"
+DATABASE_URL = os.getenv("DATABASE_URL", default_db)
 
 if "pytest" in sys.modules:
     DATABASE_URL = "sqlite:///.test.db"

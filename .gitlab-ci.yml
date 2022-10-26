@@ -1,4 +1,4 @@
-image: python:latest
+image: alpine:edge
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -16,12 +16,8 @@ cache:
     - venv/
 
 before_script:
+  - apk add --update python mdbook cargo
   - python --version  # For debugging
-  - apt-get update -yqq
-  - apt-get install -yqq curl
-  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  - source "$HOME/.cargo/env"
-  - cargo install mdbook
   - pip install poetry
   - poetry install
   - source $(poetry env info --path)/bin/activate

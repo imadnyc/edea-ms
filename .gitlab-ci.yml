@@ -26,28 +26,13 @@ test:
   script:
     - pytest --cov=app app
 
-run:
-  script:
-    - poetry build
-    - pip install dist/*
-    # run the command here
-  artifacts:
-    paths:
-      - dist/*.whl
-
 pages:
   script:
-    - mdbook build
     - cd doc
-    - make html
-    - mv build/html/ ../public/
+    - mdbook build
+    - mv book/ ../public/
   artifacts:
     paths:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-deploy:
-  stage: deploy
-  script: echo "Define your deployment script!"
-  environment: production

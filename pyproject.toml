@@ -9,9 +9,9 @@ packages = [{include = "app"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-fastapi = "^0.85.0"
-ormar = {extras = ["orjson"], version = "^0.11.3"}
-uvicorn = {extras = ["standard"], version = "^0.18.3"}
+fastapi = "^0.85.1"
+ormar = {extras = ["orjson"], version = "^0.12.0"}
+uvicorn = {extras = ["standard"], version = "^0.19.0"}
 databases = "^0.6.1"
 aiosqlite = "^0.17.0"
 httpx = "^0.23.0"

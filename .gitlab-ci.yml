@@ -16,7 +16,7 @@ cache:
     - venv/
 
 before_script:
-  - apk add --update python mdbook cargo
+  - apk add --update python3 mdbook cargo
   - python --version  # For debugging
   - pip install poetry
   - poetry install

@@ -17,6 +17,8 @@ cache:
 
 before_script:
   - python --version  # For debugging
+  - apt install -y rust cargo
+  - cargo install mdbook
   - pip install poetry
   - poetry install
   - source $(poetry env info --path)/bin/activate

@@ -59,11 +59,6 @@ Table measurement_entries as M {
   note: "The measurement points of testruns"
 }
 
-Table system_settings {
-  key varchar [pk, unique]
-  value varchar
-}
-
 Table forcing_conditions {
   id serial [pk]
   sequence_number int
@@ -72,33 +67,4 @@ Table forcing_conditions {
   string_value varchar
   testrun_id int [ref: > T.id]
   note: "Test equipment settings for specific steps in a testrun"
-}
-
-Table postproc_script_lookup {
-  id serial [pk]
-  project_id int [ref: > P.id]
-  test_name varchar
-  script_path varchar
-  stage int
-}
-
-Table postproc_jobqueue {
-  id serial [pk]
-  measurement_entry_id int [ref: > M.id]
-}
-
-Table report_revisions {
-  id serial [pk]
-  test_name varchar
-  report_id uuid
-  version varchar
-  changelog varchar
-  date timestamp
-}
-
-Table audit_log {
-  id serial [pk]
-  timestamp timestamp
-  ip inet
-  message varchar
 }

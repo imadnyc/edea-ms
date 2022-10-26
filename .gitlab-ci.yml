@@ -19,7 +19,7 @@ before_script:
   - python --version  # For debugging
   - apt-get update -yqq
   - apt-get install -yqq curl
-  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
   - cargo install mdbook
   - pip install poetry
   - poetry install

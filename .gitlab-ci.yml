@@ -16,7 +16,7 @@ cache:
     - venv/
 
 before_script:
-  - apk add --update python3 mdbook cargo
+  - apk add --update alpine-sdk coreutils python3 py3-pip mdbook cargo
   - python --version  # For debugging
   - pip install poetry
   - poetry install

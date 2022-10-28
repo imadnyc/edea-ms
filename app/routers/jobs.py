@@ -10,18 +10,18 @@ router = APIRouter()
 
 
 @router.get("/jobs/all", response_model=List[JobQueue], tags=["jobqueue"])
-async def get_all_jobs():
+async def get_all_jobs() -> List[JobQueue]:
     items = await JobQueue.objects.all()
     return items
 
 
 @router.get("/jobs/new", response_model=JobQueue, tags=["jobqueue"])
-async def get_new_job(request: Request):
+async def get_new_job(request: Request) -> JobQueue | None:
     try:
         item = await JobQueue.objects.first(state=JobState.NEW)
         worker = None
-        if hasattr(request, "client_host"):
-            worker = request.client_host
+        if request.client is not None:
+            worker = request.client.host
         await item.update(state=JobState.PENDING, worker=worker, updated_at=datetime.datetime.utcnow())
     except NoMatch:
         item = None
@@ -29,13 +29,13 @@ async def get_new_job(request: Request):
 
 
 @router.get("/jobs/{job_id}", response_model=JobQueue, tags=["jobqueue"])
-async def get_specific_job(job_id: int):
+async def get_specific_job(job_id: int) -> JobQueue:
     item = await JobQueue.objects.get(id=job_id)
     return item
 
 
 @router.post("/jobs/new", response_model=JobQueue, tags=["jobqueue"])
-async def create_job(task: JobQueue):
+async def create_job(task: JobQueue) -> JobQueue:
     task.state = JobState.NEW
     task.updated_at = datetime.datetime.utcnow()
     await task.save()
@@ -43,18 +43,18 @@ async def create_job(task: JobQueue):
 
 
 @router.put("/jobs/{job_id}", tags=["jobqueue"])
-async def update_specific_job(job_id: int, task: JobQueue):
+async def update_specific_job(job_id: int, task: JobQueue) -> JobQueue:
     tx = await JobQueue.objects.get(pk=job_id)
     return await tx.update(**task.dict())
 
 
 @router.delete("/jobs/{job_id}", tags=["jobqueue"])
-async def delete_job(job_id: int, request: Request):
+async def delete_job(job_id: int, request: Request) -> JobQueue | None:
     try:
         item = await JobQueue.objects.get(id=job_id)
         worker = None
-        if hasattr(request, "client_host"):
-            worker = request.client_host
+        if request.client is not None:
+            worker = request.client.host
         await item.update(state=JobState.COMPLETE, worker=worker, updated_at=datetime.datetime.utcnow())
     except NoMatch:
         item = None

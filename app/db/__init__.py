@@ -15,6 +15,6 @@ metadata = sqlalchemy.MetaData()
 database = databases.Database(DATABASE_URL)
 
 
-def override_db(db: databases.Database):
+def override_db(db: databases.Database) -> None:
     global database
     database = db

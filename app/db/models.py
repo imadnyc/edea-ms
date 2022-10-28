@@ -1,6 +1,7 @@
 import enum
 import os
 from datetime import datetime
+from typing import Any
 
 import sqlalchemy
 from ormar import (
@@ -56,7 +57,7 @@ class TestRun(Model):
     user_name: str = Text()
     test_name: str = Text()
     project: Project | None = ForeignKey(Project)
-    metadata: dict = JSON(default={})
+    metadata: dict[str, Any] = JSON(default={})
 
 
 class MeasurementColumn(Model):
@@ -65,7 +66,8 @@ class MeasurementColumn(Model):
 
     id: int | None = Integer(primary_key=True)
     name: str = Text()
-    project: Project | None = ForeignKey(Project)
+    project_id: int = Integer(nullable=False)
+    project: Project | None = ForeignKey(Project, name="project_id")
     spec: Specification | None = ForeignKey(Specification)
     data_source: str | None = Text(default="")
     description: str | None = Text(default="")
@@ -125,7 +127,7 @@ class JobQueue(Model):
     worker: str = Text(default='N/A')
     updated_at: datetime = DateTime(server_default=func.now())
     function_call: str = Text()
-    parameters: dict = JSON(default={})
+    parameters: dict[str, Any] = JSON(default={})
 
 
 # We can first create the db after the model has been defined.

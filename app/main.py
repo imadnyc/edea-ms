@@ -95,10 +95,10 @@ async def shutdown() -> None:
 
 
 @app.get("/static/node_modules")
-async def forbid():
+async def forbid() -> Response:
     return Response(status_code=404)
 
 
 @app.get("/")
-async def root():
+async def root() -> Response:
     return RedirectResponse("/static/index.html")

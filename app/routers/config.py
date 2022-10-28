@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 
 from app.db.models import Setting
 
@@ -8,13 +9,13 @@ router = APIRouter()
 
 
 @router.get("/config", response_model=List[Setting], tags=["configuration"])
-async def get_all_configuration_variables():
+async def get_all_configuration_variables() -> List[Setting]:
     entries = await Setting.objects.all()
     return entries
 
 
 @router.get("/config/{key}", response_model=Setting, tags=["configuration"])
-async def get_specific_variable(key: str):
+async def get_specific_variable(key: str) -> Setting:
     entry = await Setting.objects.get(key=key)
     return entry
 
@@ -31,14 +32,14 @@ async def get_specific_variable(key: str):
 
 
 @router.post("/config", response_model=Setting, tags=["configuration"])
-async def add_variable(setting: Setting):
+async def add_variable(setting: Setting) -> Setting:
     entry = await setting.save()
     return entry
 
 
 @router.put("/config", response_model=Setting, tags=["configuration"])
-async def update_variable(setting: Setting):
-    if not Setting.objects.filter(key=setting.key).exist():
+async def update_variable(setting: Setting) -> Setting:
+    if not Setting.objects.filter(key=setting.key).exists():
         raise HTTPException(
             status_code=422,
             detail={
@@ -47,12 +48,12 @@ async def update_variable(setting: Setting):
     else:
         entry = await Setting.objects.get(key=setting.key)
         entry.value = setting.value
-        entry.save()
+        await entry.save()
     return entry
 
 
 @router.delete("/config/{key}", tags=["configuration"])
-async def delete_variable(key: str):
+async def delete_variable(key: str) -> Response:
     entry = await Setting.objects.get(key=key)
-    entry.delete()
-    return
+    await entry.delete()
+    return Response(status_code=200)

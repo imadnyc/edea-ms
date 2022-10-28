@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.get("/export/db")
-async def export_database():
+async def export_database() -> FileResponse:
     dbfile = DATABASE_URL.replace('sqlite:///', '')
     main_db = await aiosqlite.connect(dbfile)
     db_name = Path(dbfile).name

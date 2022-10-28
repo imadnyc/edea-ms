@@ -1,5 +1,6 @@
 import json
 import os
+from typing import AsyncIterable
 
 import databases
 import pytest
@@ -12,12 +13,12 @@ from ..main import app
 
 
 @pytest.fixture
-def anyio_backend():
+def anyio_backend() -> str:
     return "asyncio"
 
 
 @pytest.fixture(autouse=True)
-async def setup_db(anyio_backend):
+async def setup_db(anyio_backend: str) -> AsyncIterable[None]:
     engine = sqlalchemy.create_engine("sqlite:///.test.db")
     metadata.create_all(engine)
     override_db(databases.Database("sqlite:///.test.db"))
@@ -26,14 +27,14 @@ async def setup_db(anyio_backend):
 
 
 @pytest.mark.anyio
-async def test_root():
+async def test_root() -> None:
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.get("/")
     assert response.status_code == 307
 
 
 @pytest.mark.anyio
-async def test_create_column_from_measurement_entry():
+async def test_create_column_from_measurement_entry() -> None:
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post(
             "/projects", json={"number": "X1234", "name": "Test Project"}
@@ -72,7 +73,7 @@ async def test_create_column_from_measurement_entry():
             json={
                 "sequence_number": 1,
                 "testrun": {"id": testrun["id"]},
-                "column": {"name": "test_col", "project": {"id": project["id"]}},
+                "column": {"name": "test_col", "project_id": project["id"]},
                 "string_value": "test",
             },
         )
@@ -88,18 +89,18 @@ async def test_create_column_from_measurement_entry():
             "sequence_number": 1,
             "testrun_id": testrun["id"],
             "payload": {
-                "1": {"column": {"name": "test_col", "project": {"id": project["id"]}}, "test_value": "abcd"},
-                "2": {"column": {"name": "test_col", "project": {"id": project["id"]}}, "test_value": "efgh"},
+                "1": {"column": {"name": "test_col", "project_id": project["id"]}, "test_value": "abcd"},
+                "2": {"column": {"name": "test_col", "project_id": project["id"]}, "test_value": "efgh"},
             }
         })
 
-    if response.status_code != 200:
-        print(json.dumps(response.json(), sort_keys=True, indent=4))
-        assert response.status_code == 200
+    if response.status_code != 201:
+        print(response.text)
+        assert response.status_code == 201
 
 
 @pytest.mark.anyio
-async def test_export_db():
+async def test_export_db() -> None:
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.get("/export/db")
     assert response.status_code == 200
@@ -107,7 +108,7 @@ async def test_export_db():
 
 
 @pytest.mark.anyio
-async def test_jobqueue():
+async def test_jobqueue() -> None:
     """
     Create, list, get, update and delete a job. Tests the whole workflow of jobs.
     :return:

@@ -2,13 +2,12 @@ import json
 import os
 from typing import AsyncIterable
 
-import databases
 import pytest
-import sqlalchemy
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import create_async_engine
 
-from ..db import override_db, metadata
-from ..db.models import JobState
+from ..db import override_db
+from ..db.models import JobState, Model
 from ..main import app
 
 
@@ -19,9 +18,14 @@ def anyio_backend() -> str:
 
 @pytest.fixture(autouse=True)
 async def setup_db(anyio_backend: str) -> AsyncIterable[None]:
-    engine = sqlalchemy.create_engine("sqlite:///.test.db")
-    metadata.create_all(engine)
-    override_db(databases.Database("sqlite:///.test.db"))
+    engine = create_async_engine("sqlite+aiosqlite:///.test.db")
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Model.metadata.drop_all)
+    async with engine.begin() as conn:
+        await conn.run_sync(Model.metadata.create_all)
+
+    override_db(engine)
     yield
     os.remove(".test.db")
 
@@ -56,7 +60,7 @@ async def test_create_column_from_measurement_entry() -> None:
                 "machine_hostname": "test",
                 "user_name": "test",
                 "test_name": "test",
-                "project": project,
+                "project_id": project["id"],
                 "metadata": {},
             },
         )
@@ -72,7 +76,7 @@ async def test_create_column_from_measurement_entry() -> None:
             "/measurement_entries",
             json={
                 "sequence_number": 1,
-                "testrun": {"id": testrun["id"]},
+                "testrun_id": testrun["id"],
                 "column": {"name": "test_col", "project_id": project["id"]},
                 "string_value": "test",
             },
@@ -115,6 +119,8 @@ async def test_jobqueue() -> None:
     """
     async with AsyncClient(app=app, base_url="http://test") as ac:
         r = await ac.post("/jobs/new", json={"function_call": "print", "parameters": {"hello": "world"}})
+        if r.status_code != 200:
+            print(r.json())
         assert r.status_code == 200
 
         r = await ac.get("/jobs/all")

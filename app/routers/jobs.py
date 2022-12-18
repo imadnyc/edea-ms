@@ -1,61 +1,107 @@
 import datetime
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Request
-from ormar import NoMatch
+from pydantic import BaseModel
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.sql import select
 
-from app.db.models import JobQueue, JobState
+from app.db import async_session
+from app.db import models
+from app.db.models import JobState, update_from_model
 
 router = APIRouter()
 
 
-@router.get("/jobs/all", response_model=List[JobQueue], tags=["jobqueue"])
-async def get_all_jobs() -> List[JobQueue]:
-    items = await JobQueue.objects.all()
-    return items
+class Job(BaseModel):
+    class Config:
+        orm_mode = True
+
+    id: int | None
+    state: JobState | None
+    worker: str | None
+    updated_at: datetime | None
+    function_call: str
+    parameters: dict
 
 
-@router.get("/jobs/new", response_model=JobQueue, tags=["jobqueue"])
-async def get_new_job(request: Request) -> JobQueue | None:
-    try:
-        item = await JobQueue.objects.first(state=JobState.NEW)
-        worker = None
-        if request.client is not None:
-            worker = request.client.host
-        await item.update(state=JobState.PENDING, worker=worker, updated_at=datetime.datetime.utcnow())
-    except NoMatch:
-        item = None
-    return item
+class NewJob(BaseModel):
+    function_call: str
+    parameters: dict
 
 
-@router.get("/jobs/{job_id}", response_model=JobQueue, tags=["jobqueue"])
-async def get_specific_job(job_id: int) -> JobQueue:
-    item = await JobQueue.objects.get(id=job_id)
-    return item
+@router.get("/jobs/all", response_model=List[Job], tags=["jobqueue"])
+async def get_all_jobs() -> List[Job]:
+    async with async_session() as session:
+        jobs: List[Job] = []
+        for job in (await session.scalars(select(models.Job))).all():
+            jobs.append(Job.from_orm(job))
+
+        return jobs
 
 
-@router.post("/jobs/new", response_model=JobQueue, tags=["jobqueue"])
-async def create_job(task: JobQueue) -> JobQueue:
-    task.state = JobState.NEW
-    task.updated_at = datetime.datetime.utcnow()
-    await task.save()
-    return task
+@router.get("/jobs/new", response_model=Job, tags=["jobqueue"])
+async def get_new_job(request: Request) -> Job | None:
+    async with async_session() as session:
+        try:
+            res = await session.scalars(select(models.Job).where(models.Job.state == JobState.NEW))
+            item = res.first()
+
+            if request.client is not None:
+                item.worker = request.client.host
+            item.state = JobState.PENDING
+            item.updated_at = datetime.utcnow()
+
+            await session.commit()
+        except NoResultFound:
+            item = None
+
+        return Job.from_orm(item)
+
+
+@router.get("/jobs/{job_id}", response_model=Job, tags=["jobqueue"])
+async def get_specific_job(job_id: int) -> Job:
+    async with async_session() as session:
+        return Job.from_orm((await session.scalars(select(models.Job).where(models.Job.id == job_id))).one())
+
+
+@router.post("/jobs/new", response_model=Job, tags=["jobqueue"])
+async def create_job(new_task: NewJob) -> Job:
+    async with async_session() as session:
+        task = models.Job(state=JobState.NEW, updated_at=datetime.utcnow(), function_call=new_task.function_call,
+                          parameters=new_task.parameters)
+
+        session.add(task)
+        await session.commit()
+
+        return Job.from_orm(task)
 
 
 @router.put("/jobs/{job_id}", tags=["jobqueue"])
-async def update_specific_job(job_id: int, task: JobQueue) -> JobQueue:
-    tx = await JobQueue.objects.get(pk=job_id)
-    return await tx.update(**task.dict())
+async def update_specific_job(job_id: int, task: Job) -> Job:
+    async with async_session() as session:
+        job = (await session.scalars(select(models.Job).where(models.Job.id == job_id))).one()
+
+        session.add(update_from_model(job, task))
+        await session.commit()
+
+        return Job.from_orm(job)
 
 
 @router.delete("/jobs/{job_id}", tags=["jobqueue"])
-async def delete_job(job_id: int, request: Request) -> JobQueue | None:
-    try:
-        item = await JobQueue.objects.get(id=job_id)
-        worker = None
-        if request.client is not None:
-            worker = request.client.host
-        await item.update(state=JobState.COMPLETE, worker=worker, updated_at=datetime.datetime.utcnow())
-    except NoMatch:
-        item = None
-    return item
+async def delete_job(job_id: int, request: Request) -> Job | None:
+    async with async_session() as session:
+        try:
+            item = (await session.scalars(select(models.Job).where(models.Job.id == job_id))).one()
+            item.worker = None
+            item.state = JobState.COMPLETE
+            item.updated_at = datetime.now()
+            if request.client is not None:
+                item.worker = request.client.host
+
+            session.add(item)
+            await session.commit()
+        except NoResultFound:
+            item = None
+        return Job.from_orm(item)

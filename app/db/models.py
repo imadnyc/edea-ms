@@ -1,113 +1,149 @@
+from __future__ import annotations
+
 import enum
 import os
 from datetime import datetime
-from typing import Any
 
 import sqlalchemy
-from ormar import (
-    Integer,
-    ForeignKey,
-    Text,
-    Float,
-    Model,
-    ModelMeta,
-    DateTime,
-    JSON,
+from pydantic import BaseModel
+from sqlalchemy import JSON, ForeignKey, func
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    declared_attr,
+    mapped_column,
+    relationship,
 )
-from sqlalchemy import func
 
-from ..db import metadata, database, DATABASE_URL, default_db
+from ..db import DATABASE_URL, default_db
 
 
-class BaseMeta(ModelMeta):
-    metadata = metadata
-    database = database
+class Model(DeclarativeBase):
+    pass
+
+
+def update_from_model(obj: Model, mod: BaseModel) -> Model:
+    for field in mod.__fields_set__:
+        if field != "id":
+            setattr(obj, field, getattr(mod, field))
+
+    return obj
+
+
+class ProvidesProjectMixin:
+    "A mixin that adds a 'project' relationship to classes."
+
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+
+    @declared_attr
+    def project(cls) -> Mapped["Project"]:
+        return relationship("Project")
+
+
+class ProvidesSpecificationMixin:
+    "A mixin that adds a 'specification' relationship to classes."
+
+    specification_id: Mapped[int | None] = mapped_column(ForeignKey("specifications.id"))
+
+    @declared_attr
+    def specification(cls) -> Mapped["Specification"]:
+        return relationship("Specification")
+
+
+class ProvidesMeasurementColumnMixin:
+    "A mixin that adds a 'measurement_column' relationship to classes."
+
+    column_id: Mapped[int] = mapped_column(ForeignKey("measurement_columns.id"))
+
+    @declared_attr
+    def column(cls) -> Mapped["MeasurementColumn"]:
+        return relationship("MeasurementColumn")
+
+
+class ProvidesTestRunColumnMixin:
+    "A mixin that adds a 'testrun' relationship to classes."
+
+    testrun_id: Mapped[int] = mapped_column(ForeignKey("testruns.id"))
+
+    @declared_attr
+    def testrun(cls) -> Mapped["TestRun"]:
+        return relationship("TestRun")
 
 
 class Project(Model):
-    class Meta(BaseMeta):
-        tablename = "projects"
+    __tablename__: str = "projects"
 
-    id: int | None = Integer(primary_key=True)
-    number: str = Text()
-    name: str = Text()
-
-
-class Specification(Model):
-    class Meta(BaseMeta):
-        tablename = "specifications"
-
-    id: int = Integer(primary_key=True)
-    project: Project | None = ForeignKey(Project)
-    name: str = Text()
-    unit: str = Text()
-    minimum: float = Float()
-    typical: float = Float()
-    maximum: float = Float()
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str]
+    name: Mapped[str]
 
 
-class TestRun(Model):
-    class Meta(BaseMeta):
-        tablename = "testruns"
+class Specification(Model, ProvidesProjectMixin):
+    __tablename__: str = "specifications"
 
-    id: int | None = Integer(primary_key=True)
-    short_code: str = Text(unique=True)  # String(max_length=4)
-    dut_id: str = Text()
-    machine_hostname: str = Text()
-    user_name: str = Text()
-    test_name: str = Text()
-    project: Project | None = ForeignKey(Project)
-    metadata: dict[str, Any] = JSON(default={})
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    unit: Mapped[str]
+    minimum: Mapped[float]
+    typical: Mapped[float]
+    maximum: Mapped[float]
 
 
-class MeasurementColumn(Model):
-    class Meta(BaseMeta):
-        tablename = "measurement_columns"
+class TestRun(Model, ProvidesProjectMixin):
+    __tablename__: str = "testruns"
 
-    id: int | None = Integer(primary_key=True)
-    name: str = Text()
-    project_id: int = Integer(nullable=False)
-    project: Project | None = ForeignKey(Project, name="project_id")
-    spec: Specification | None = ForeignKey(Specification)
-    data_source: str | None = Text(default="")
-    description: str | None = Text(default="")
-    user_note: str | None = Text(default="")
-    measurement_unit: str | None = Text(default="")
-    flags: int | None = Integer(default=0)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    short_code: Mapped[str] = mapped_column(unique=True)  # String(max_length=4)
+    dut_id: Mapped[str]
+    machine_hostname: Mapped[str]
+    user_name: Mapped[str]
+    test_name: Mapped[str]
+    data: Mapped[dict | None] = mapped_column(JSON)
+
+    __mapper_args__ = {"eager_defaults": True}
 
 
-class MeasurementEntry(Model):
-    class Meta(BaseMeta):
-        tablename = "measurement_entries"
+class MeasurementColumn(Model, ProvidesProjectMixin, ProvidesSpecificationMixin):
+    __tablename__: str = "measurement_columns"
 
-    id: int | None = Integer(primary_key=True)
-    sequence_number: int = Integer()
-    testrun: TestRun | None = ForeignKey(TestRun, nullable=False)
-    column: MeasurementColumn | None = ForeignKey(MeasurementColumn, nullable=False)
-    numeric_value: float | None = Float(default=None, nullable=True)
-    string_value: str | None = Text(default=None, nullable=True)
-    created_at: datetime = DateTime(server_default=func.now())
-    flags: int | None = Integer(default=0)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    data_source: Mapped[str | None] = mapped_column(default="")
+    description: Mapped[str | None] = mapped_column(default="")
+    user_note: Mapped[str | None] = mapped_column(default="")
+    measurement_unit: Mapped[str | None] = mapped_column(default="")
+    flags: Mapped[int | None] = mapped_column(default=0)
 
 
-class ForcingCondition(Model):
-    class Meta(BaseMeta):
-        tablename = "forcing_conditions"
+class MeasurementEntry(
+    Model, ProvidesTestRunColumnMixin, ProvidesMeasurementColumnMixin
+):
+    __tablename__ = "measurement_entries"
 
-    id: int = Integer(primary_key=True)
-    sequence_number: int = Integer()
-    column: MeasurementColumn | None = ForeignKey(MeasurementColumn)
-    numeric_value: float = Float()
-    string_value: str = Text()
-    testrun: TestRun | None = ForeignKey(TestRun)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sequence_number: Mapped[int]
+    numeric_value: Mapped[float | None]
+    string_value: Mapped[str | None]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    flags: Mapped[int | None] = mapped_column(default=0)
+
+
+class ForcingCondition(
+    Model, ProvidesMeasurementColumnMixin, ProvidesTestRunColumnMixin
+):
+    __tablename__: str = "forcing_conditions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sequence_number: Mapped[int]
+    numeric_value: Mapped[float | None]
+    string_value: Mapped[str | None]
 
 
 class Setting(Model):
-    class Meta(BaseMeta):
-        tablename = "sysconfig"
+    __tablename__: str = "sysconfig"
 
-    key: str = Text(primary_key=True)
-    value: str = Text()
+    key: Mapped[str] = mapped_column(primary_key=True)
+    value: Mapped[str]
 
 
 class JobState(int, enum.Enum):
@@ -117,22 +153,22 @@ class JobState(int, enum.Enum):
     FAILED = 4
 
 
-class JobQueue(Model):
-    class Meta(BaseMeta):
-        tablename = "jobqueue"
+class Job(Model):
+    __tablename__: str = "jobqueue"
 
-    id: int = Integer(primary_key=True)
-    state: int = Integer(choices=list(JobState), default=JobState.NEW)
-    # state: JobState = sqlalchemy.Enum(enum_class=JobState)
-    worker: str = Text(default='N/A')
-    updated_at: datetime = DateTime(server_default=func.now())
-    function_call: str = Text()
-    parameters: dict[str, Any] = JSON(default={})
+    id: Mapped[int] = mapped_column(primary_key=True)
+    state: Mapped[JobState] = mapped_column(default=JobState.NEW)
+    worker: Mapped[str] = mapped_column(default="N/A")
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    function_call: Mapped[str]
+    parameters: Mapped[dict] = mapped_column(JSON)
+
+    __mapper_args__ = {"eager_defaults": True}
 
 
 # We can first create the db after the model has been defined.
 if DATABASE_URL == default_db:
-    dbfile = DATABASE_URL.replace('sqlite:///', '')
+    dbfile = DATABASE_URL.replace("sqlite:///", "")
     if not os.path.isfile(dbfile):
         engine = sqlalchemy.create_engine(DATABASE_URL)
-        metadata.create_all(engine)
+        Model.create_all(engine)

@@ -3,7 +3,6 @@ from fastapi.responses import RedirectResponse
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
-from . import db
 from .routers import (
     testruns,
     projects,
@@ -67,7 +66,7 @@ app = FastAPI(
     openapi_tags=tags_metadata,
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.state.database = db.database
+# app.state.database = db.database
 app.include_router(testruns.router)
 app.include_router(projects.router)
 app.include_router(specifications.router)
@@ -82,16 +81,18 @@ app.include_router(ui.router)
 
 @app.on_event("startup")
 async def startup() -> None:
-    database_ = app.state.database
-    if not database_.is_connected:
-        await database_.connect()
+    pass
+    # database_ = app.state.database
+    # if not database_.is_connected:
+    #    await database_.connect()
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
-    database_ = app.state.database
-    if database_.is_connected:
-        await database_.disconnect()
+    pass
+    # database_ = app.state.database
+    # if database_.is_connected:
+    #    await database_.disconnect()
 
 
 @app.get("/static/node_modules")

@@ -34,9 +34,9 @@ typecheck:
   script:
     - mypy -p app
 
-migrations:
-  script:
-    - pytest --test-alembic
+# migrations:
+#  script:
+#    - pytest --test-alembic
 
 pages:
   script:

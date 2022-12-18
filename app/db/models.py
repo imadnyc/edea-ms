@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import enum
-import os
 from datetime import datetime
+from typing import TypeVar, Any
 
-import sqlalchemy
 from pydantic import BaseModel
 from sqlalchemy import JSON, ForeignKey, func
 from sqlalchemy.orm import (
@@ -15,19 +14,16 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from ..db import DATABASE_URL, default_db
+T = TypeVar('T', bound='Model')
 
 
 class Model(DeclarativeBase):
-    pass
+    def update_from_model(self: T, mod: BaseModel) -> T:
+        for field in mod.__fields_set__:
+            if field != "id":
+                setattr(self, field, getattr(mod, field))
 
-
-def update_from_model(obj: Model, mod: BaseModel) -> Model:
-    for field in mod.__fields_set__:
-        if field != "id":
-            setattr(obj, field, getattr(mod, field))
-
-    return obj
+        return self
 
 
 class ProvidesProjectMixin:
@@ -98,7 +94,7 @@ class TestRun(Model, ProvidesProjectMixin):
     machine_hostname: Mapped[str]
     user_name: Mapped[str]
     test_name: Mapped[str]
-    data: Mapped[dict | None] = mapped_column(JSON)
+    data: Mapped[dict[Any, Any] | None] = mapped_column(JSON)
 
     __mapper_args__ = {"eager_defaults": True}
 
@@ -161,14 +157,6 @@ class Job(Model):
     worker: Mapped[str] = mapped_column(default="N/A")
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
     function_call: Mapped[str]
-    parameters: Mapped[dict] = mapped_column(JSON)
+    parameters: Mapped[dict[Any, Any]] = mapped_column(JSON)
 
     __mapper_args__ = {"eager_defaults": True}
-
-
-# We can first create the db after the model has been defined.
-if DATABASE_URL == default_db:
-    dbfile = DATABASE_URL.replace("sqlite:///", "")
-    if not os.path.isfile(dbfile):
-        engine = sqlalchemy.create_engine(DATABASE_URL)
-        Model.create_all(engine)

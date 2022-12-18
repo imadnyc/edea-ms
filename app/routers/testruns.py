@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 
 router = APIRouter()
 
@@ -53,7 +52,8 @@ async def create_testrun(new_run: TestRun) -> TestRun:
             run = None
 
         if run is None:
-            run = update_from_model(models.TestRun(), new_run)
+            run = models.TestRun()
+            run.update_from_model(new_run)
             session.add(run)
             await session.commit()
 
@@ -65,7 +65,7 @@ async def update_testrun(run_id: int, run: TestRun) -> TestRun:
     async with async_session() as session:
         cur = (await session.scalars(select(models.TestRun).where(models.TestRun.id == run_id))).one()
 
-        update_from_model(cur, run)
+        cur.update_from_model(run)
         await session.commit()
 
         return TestRun.from_orm(cur)

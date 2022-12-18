@@ -1,6 +1,5 @@
-import datetime
 from datetime import datetime
-from typing import List
+from typing import List, Any
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -9,7 +8,7 @@ from sqlalchemy.sql import select
 
 from app.db import async_session
 from app.db import models
-from app.db.models import JobState, update_from_model
+from app.db.models import JobState
 
 router = APIRouter()
 
@@ -23,12 +22,12 @@ class Job(BaseModel):
     worker: str | None
     updated_at: datetime | None
     function_call: str
-    parameters: dict
+    parameters: dict[Any, Any]
 
 
 class NewJob(BaseModel):
     function_call: str
-    parameters: dict
+    parameters: dict[Any, Any]
 
 
 @router.get("/jobs/all", response_model=List[Job], tags=["jobqueue"])
@@ -47,6 +46,8 @@ async def get_new_job(request: Request) -> Job | None:
         try:
             res = await session.scalars(select(models.Job).where(models.Job.state == JobState.NEW))
             item = res.first()
+            if item is None:
+                return None
 
             if request.client is not None:
                 item.worker = request.client.host
@@ -83,7 +84,7 @@ async def update_specific_job(job_id: int, task: Job) -> Job:
     async with async_session() as session:
         job = (await session.scalars(select(models.Job).where(models.Job.id == job_id))).one()
 
-        session.add(update_from_model(job, task))
+        session.add(job.update_from_model(task))
         await session.commit()
 
         return Job.from_orm(job)
@@ -94,7 +95,9 @@ async def delete_job(job_id: int, request: Request) -> Job | None:
     async with async_session() as session:
         try:
             item = (await session.scalars(select(models.Job).where(models.Job.id == job_id))).one()
-            item.worker = None
+            if item is None:
+                return None
+
             item.state = JobState.COMPLETE
             item.updated_at = datetime.now()
             if request.client is not None:

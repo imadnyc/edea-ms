@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 
 router = APIRouter()
 
@@ -33,7 +32,8 @@ async def get_projects() -> List[Project]:
 @router.post("/projects", response_model=Project, tags=["projects"])
 async def create_project(project: Project) -> Project:
     async with async_session() as session:
-        cur = update_from_model(models.Project(), project)
+        cur = models.Project()
+        cur.update_from_model(project)
 
         session.add(cur)
         await session.commit()
@@ -46,7 +46,7 @@ async def update_project(id: int, project: Project) -> Project:
     async with async_session() as session:
         cur = (await session.scalars(select(models.Project).where(models.Project.id == id))).one()
 
-        update_from_model(cur, project)
+        cur.update_from_model(project)
         await session.commit()
 
         return Project.from_orm(cur)

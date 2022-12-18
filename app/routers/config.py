@@ -1,13 +1,12 @@
-from select import select
 from typing import List
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 
 
 class Setting(BaseModel):
@@ -66,7 +65,7 @@ async def update_variable(setting: Setting) -> Setting:
         try:
             cur = (await session.scalars(select(models.Setting).where(models.Setting.key == setting.key))).one()
 
-            update_from_model(cur, setting)
+            cur.update_from_model(setting)
             await session.commit()
 
             return Setting.from_orm(cur)

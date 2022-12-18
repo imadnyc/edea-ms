@@ -1,12 +1,11 @@
-from select import select
 from typing import List
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 
 
 class MeasurementColumn(BaseModel):
@@ -30,17 +29,18 @@ router = APIRouter()
 @router.get("/measurement_columns", response_model=List[MeasurementColumn], tags=["measurement_column"])
 async def get_measurement_columns() -> List[MeasurementColumn]:
     async with async_session() as session:
-        items: List[MeasurementColumn] = []
-        for item in (await session.scalars(select(models.MeasurementColumn))).all():
-            items.append(MeasurementColumn.from_orm(item))
+        columns: List[MeasurementColumn] = []
+        for column in (await session.scalars(select(models.MeasurementColumn))).all():
+            columns.append(MeasurementColumn.from_orm(column))
 
-        return items
+        return columns
 
 
 @router.post("/measurement_columns", response_model=MeasurementColumn, tags=["measurement_column"])
 async def create_measurement_column(column: MeasurementColumn) -> MeasurementColumn:
     async with async_session() as session:
-        cur = update_from_model(models.MeasurementColumn(), column)
+        cur = models.MeasurementColumn()
+        cur.update_from_model(column)
 
         session.add(cur)
         await session.commit()

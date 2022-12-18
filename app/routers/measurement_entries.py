@@ -8,7 +8,6 @@ from sqlalchemy import select, and_
 from sqlalchemy.exc import NoResultFound
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 from app.routers.measurement_columns import MeasurementColumn
 from app.routers.testruns import TestRun
 
@@ -120,10 +119,10 @@ async def update_measurement_entry(id: int, entry: MeasurementEntry) -> Measurem
     async with async_session() as session:
         cur = (await session.scalars(select(models.MeasurementEntry).where(models.MeasurementEntry.id == id))).one()
 
-        e = update_from_model(cur, entry)
+        cur.update_from_model(entry)
         await session.commit()
 
-        return MeasurementEntry.from_orm(e)
+        return MeasurementEntry.from_orm(cur)
 
 
 @router.delete("/measurement_entries/{id}", tags=["measurement_entry"])

@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 
 
 class Specification(BaseModel):
@@ -38,7 +37,8 @@ async def get_specifications() -> List[Specification]:
 @router.post("/specifications", response_model=Specification, tags=["specification"])
 async def create_specification(spec: Specification) -> Specification:
     async with async_session() as session:
-        cur = update_from_model(models.Specification(), spec)
+        cur = models.Specification()
+        cur.update_from_model(spec)
 
         session.add(cur)
         await session.commit()
@@ -51,7 +51,7 @@ async def update_specification(id: int, spec: Specification) -> Specification:
     async with async_session() as session:
         cur = (await session.scalars(select(models.Specification).where(models.Specification.id == id))).one()
 
-        update_from_model(cur, spec)
+        cur.update_from_model(spec)
         await session.commit()
 
         return Specification.from_orm(cur)

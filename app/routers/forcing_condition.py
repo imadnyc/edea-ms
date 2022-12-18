@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.db import models, async_session
-from app.db.models import update_from_model
 
 
 class ForcingCondition(BaseModel):
@@ -38,7 +37,7 @@ async def get_forcing_conditions() -> List[ForcingCondition]:
 async def create_forcing_conditions(condition: ForcingCondition) -> ForcingCondition:
     async with async_session() as session:
         cond = models.ForcingCondition()
-        session.add(update_from_model(cond, condition))
+        session.add(cond.update_from_model(condition))
 
         await session.commit()
 
@@ -50,7 +49,7 @@ async def update_forcing_condition(id: int, condition: ForcingCondition) -> Forc
     async with async_session() as session:
         cur = (await session.scalars(select(models.ForcingCondition).where(models.ForcingCondition.id == id))).one()
 
-        update_from_model(cur, condition)
+        cur.update_from_model(condition)
         await session.commit()
 
         return ForcingCondition.from_orm(cur)

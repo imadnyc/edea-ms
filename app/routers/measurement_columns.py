@@ -26,7 +26,7 @@ class MeasurementColumn(BaseModel):
 router = APIRouter()
 
 
-@router.get("/measurement_columns", response_model=List[MeasurementColumn], tags=["measurement_column"])
+@router.get("/measurement_columns", tags=["measurement_column"])
 async def get_measurement_columns() -> List[MeasurementColumn]:
     async with async_session() as session:
         columns: List[MeasurementColumn] = []
@@ -36,7 +36,7 @@ async def get_measurement_columns() -> List[MeasurementColumn]:
         return columns
 
 
-@router.post("/measurement_columns", response_model=MeasurementColumn, tags=["measurement_column"])
+@router.post("/measurement_columns", tags=["measurement_column"])
 async def create_measurement_column(column: MeasurementColumn) -> MeasurementColumn:
     async with async_session() as session:
         cur = models.MeasurementColumn()
@@ -56,9 +56,9 @@ async def get_measurement_column(id: int) -> MeasurementColumn:
 
 
 @router.delete("/measurement_columns/{id}", tags=["measurement_column"])
-async def delete_measurement_column(id: int) -> JSONResponse:
+async def delete_measurement_column(id: int) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.MeasurementColumn(id=id))
         await session.commit()
 
-    return JSONResponse(content={"deleted_rows": 1})
+    return {"deleted_rows": 1}

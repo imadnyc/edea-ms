@@ -9,8 +9,8 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-fastapi = "^0.88.0"
-sqlalchemy = { extras = ["asyncio"], version = "^2.0.0b4" }
+fastapi = "^0.89.0"
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.0rc1" }
 uvicorn = { extras = ["standard"], version = "^0.20.0" }
 aiosqlite = "^0.17.0"
 httpx = "^0.23.1"
@@ -25,7 +25,7 @@ pytest-cov = "^4.0.0"
 trio = "^0.22.0"
 mypy = "^0.991"
 pytest-alembic = "^0.9.1"
-sqlalchemy = { version = "2.0.0b4", extras = ["mypy"] }
+sqlalchemy = { version = "2.0.0rc1", extras = ["mypy"] }
 sourcery-cli = { version = "^1.0.2", optional = true }
 
 [tool.poetry.group.debug]

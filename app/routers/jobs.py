@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Any
 
 from fastapi import APIRouter, Request
@@ -30,7 +30,7 @@ class NewJob(BaseModel):
     parameters: dict[Any, Any]
 
 
-@router.get("/jobs/all", response_model=List[Job], tags=["jobqueue"])
+@router.get("/jobs/all", tags=["jobqueue"])
 async def get_all_jobs() -> List[Job]:
     async with async_session() as session:
         jobs: List[Job] = []
@@ -40,7 +40,7 @@ async def get_all_jobs() -> List[Job]:
         return jobs
 
 
-@router.get("/jobs/new", response_model=Job, tags=["jobqueue"])
+@router.get("/jobs/new", tags=["jobqueue"])
 async def get_new_job(request: Request) -> Job | None:
     async with async_session() as session:
         try:
@@ -52,7 +52,7 @@ async def get_new_job(request: Request) -> Job | None:
             if request.client is not None:
                 item.worker = request.client.host
             item.state = JobState.PENDING
-            item.updated_at = datetime.utcnow()
+            item.updated_at = datetime.now(timezone.utc)
 
             await session.commit()
         except NoResultFound:
@@ -61,16 +61,17 @@ async def get_new_job(request: Request) -> Job | None:
         return Job.from_orm(item)
 
 
-@router.get("/jobs/{job_id}", response_model=Job, tags=["jobqueue"])
+@router.get("/jobs/{job_id}", tags=["jobqueue"])
 async def get_specific_job(job_id: int) -> Job:
     async with async_session() as session:
         return Job.from_orm((await session.scalars(select(models.Job).where(models.Job.id == job_id))).one())
 
 
-@router.post("/jobs/new", response_model=Job, tags=["jobqueue"])
+@router.post("/jobs/new", tags=["jobqueue"])
 async def create_job(new_task: NewJob) -> Job:
     async with async_session() as session:
-        task = models.Job(state=JobState.NEW, updated_at=datetime.utcnow(), function_call=new_task.function_call,
+        task = models.Job(state=JobState.NEW, updated_at=datetime.now(timezone.utc),
+                          function_call=new_task.function_call,
                           parameters=new_task.parameters)
 
         session.add(task)

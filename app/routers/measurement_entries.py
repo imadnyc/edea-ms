@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import List, Any
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select, and_
 from sqlalchemy.exc import NoResultFound
@@ -29,7 +28,7 @@ class MeasurementEntry(BaseModel):
 router = APIRouter()
 
 
-@router.get("/measurement_entries", response_model=List[MeasurementEntry], tags=["measurement_entry"])
+@router.get("/measurement_entries", tags=["measurement_entry"])
 async def get_measurement_entries() -> List[MeasurementEntry]:
     async with async_session() as session:
         items: List[MeasurementEntry] = []
@@ -45,8 +44,8 @@ class BatchInput(BaseModel):
     payload: dict[str, Any]  # mapping of column name to result value
 
 
-@router.post("/measurement_entries/batch", tags=["measurement_entry"])
-async def batch_create_measurement_entries(batch_input: BatchInput) -> Response:
+@router.post("/measurement_entries/batch", tags=["measurement_entry"], status_code=201)
+async def batch_create_measurement_entries(batch_input: BatchInput) -> None:
     async with async_session() as session:
         measurement_column_ids: dict[str, int]
 
@@ -78,10 +77,8 @@ async def batch_create_measurement_entries(batch_input: BatchInput) -> Response:
 
         await session.commit()
 
-    return Response(status_code=201)
 
-
-@router.post("/measurement_entries", response_model=MeasurementEntry, tags=["measurement_entry"])
+@router.post("/measurement_entries", tags=["measurement_entry"])
 async def create_measurement_entry(entry: MeasurementEntry) -> MeasurementEntry:
     async with async_session() as session:
         testrun = (await session.scalars(select(models.TestRun).where(models.TestRun.id == entry.testrun_id))).one()
@@ -126,9 +123,9 @@ async def update_measurement_entry(id: int, entry: MeasurementEntry) -> Measurem
 
 
 @router.delete("/measurement_entries/{id}", tags=["measurement_entry"])
-async def delete_measurement_entry(id: int) -> JSONResponse:
+async def delete_measurement_entry(id: int) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.MeasurementEntry(id=id))
         await session.commit()
 
-    return JSONResponse(content={"deleted_rows": 1})
+    return {"deleted_rows": 1}

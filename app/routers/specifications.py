@@ -24,7 +24,7 @@ class Specification(BaseModel):
 router = APIRouter()
 
 
-@router.get("/specifications", response_model=List[Specification], tags=["specification"])
+@router.get("/specifications", tags=["specification"])
 async def get_specifications() -> List[Specification]:
     async with async_session() as session:
         specs: List[Specification] = []
@@ -34,7 +34,7 @@ async def get_specifications() -> List[Specification]:
         return specs
 
 
-@router.post("/specifications", response_model=Specification, tags=["specification"])
+@router.post("/specifications", tags=["specification"])
 async def create_specification(spec: Specification) -> Specification:
     async with async_session() as session:
         cur = models.Specification()
@@ -58,9 +58,9 @@ async def update_specification(id: int, spec: Specification) -> Specification:
 
 
 @router.delete("/specifications/{id}", tags=["specification"])
-async def delete_specification(id: int) -> JSONResponse:
+async def delete_specification(id: int) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.Specification(id=id))
         await session.commit()
 
-    return JSONResponse(content={"deleted_rows": 1})
+    return {"deleted_rows": 1}

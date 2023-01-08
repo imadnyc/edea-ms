@@ -25,7 +25,7 @@ class TestRun(BaseModel):
     data: Json[Any] | None
 
 
-@router.get("/testruns", response_model=List[TestRun], tags=["testrun"])
+@router.get("/testruns", tags=["testrun"])
 async def get_all_testruns() -> List[TestRun]:
     async with async_session() as session:
         items: List[TestRun] = []
@@ -35,14 +35,14 @@ async def get_all_testruns() -> List[TestRun]:
         return items
 
 
-@router.get("/testruns/short_code/{short_code}", response_model=List[TestRun], tags=["testrun"])
+@router.get("/testruns/short_code/{short_code}", tags=["testrun"])
 async def get_specific_testrun(short_code: str) -> TestRun:
     async with async_session() as session:
         return TestRun.from_orm(
             (await session.scalars(select(models.TestRun).where(models.TestRun.short_code == short_code))).one())
 
 
-@router.post("/testruns", response_model=TestRun, tags=["testrun"])
+@router.post("/testruns", tags=["testrun"])
 async def create_testrun(new_run: TestRun) -> TestRun:
     async with async_session() as session:
         res = await session.scalars(select(models.TestRun).where(models.TestRun.short_code == new_run.short_code))
@@ -60,7 +60,7 @@ async def create_testrun(new_run: TestRun) -> TestRun:
         return TestRun.from_orm(run)
 
 
-@router.put("/testruns/{run_id}", response_model=TestRun, tags=["testrun"])
+@router.put("/testruns/{run_id}", tags=["testrun"])
 async def update_testrun(run_id: int, run: TestRun) -> TestRun:
     async with async_session() as session:
         cur = (await session.scalars(select(models.TestRun).where(models.TestRun.id == run_id))).one()
@@ -72,9 +72,9 @@ async def update_testrun(run_id: int, run: TestRun) -> TestRun:
 
 
 @router.delete("/testruns/{run_id}", tags=["testrun"])
-async def delete_testrun(run_id: int) -> JSONResponse:
+async def delete_testrun(run_id: int) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.TestRun(id=run_id))
         await session.commit()
 
-    return JSONResponse(content={"deleted_rows": 1})
+    return {"deleted_rows": 1}

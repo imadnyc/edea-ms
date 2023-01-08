@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, Response
@@ -8,5 +10,5 @@ router = APIRouter()
 
 
 @router.get("/ui/table/{id}", response_class=HTMLResponse)
-async def read_item(request: Request, id: str) -> Response:
+async def read_item(request: Request, id: str) -> Any:
     return templates.TemplateResponse("table.html", {"request": request, "id": id})

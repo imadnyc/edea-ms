@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.responses import Response
@@ -96,10 +98,10 @@ async def shutdown() -> None:
 
 
 @app.get("/static/node_modules")
-async def forbid() -> Response:
+async def forbid() -> Any:
     return Response(status_code=404)
 
 
 @app.get("/")
-async def root() -> Response:
+async def root() -> Any:
     return RedirectResponse("/static/index.html")

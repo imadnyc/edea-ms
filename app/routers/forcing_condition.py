@@ -23,7 +23,7 @@ class ForcingCondition(BaseModel):
 router = APIRouter()
 
 
-@router.get("/forcing_conditions", response_model=List[ForcingCondition], tags=["forcing_condition"])
+@router.get("/forcing_conditions", tags=["forcing_condition"])
 async def get_forcing_conditions() -> List[ForcingCondition]:
     async with async_session() as session:
         items: List[ForcingCondition] = []
@@ -33,7 +33,7 @@ async def get_forcing_conditions() -> List[ForcingCondition]:
         return items
 
 
-@router.post("/forcing_conditions", response_model=ForcingCondition, tags=["forcing_condition"])
+@router.post("/forcing_conditions", tags=["forcing_condition"])
 async def create_forcing_conditions(condition: ForcingCondition) -> ForcingCondition:
     async with async_session() as session:
         cond = models.ForcingCondition()
@@ -56,9 +56,9 @@ async def update_forcing_condition(id: int, condition: ForcingCondition) -> Forc
 
 
 @router.delete("/forcing_conditions/{id}", tags=["forcing_condition"])
-async def delete_forcing_condition(id: int) -> JSONResponse:
+async def delete_forcing_condition(id: int) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.ForcingCondition(id=id))
         await session.commit()
 
-    return JSONResponse(content={"deleted_rows": 1})
+    return {"deleted_rows": 1}

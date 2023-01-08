@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 import aiosqlite
 from fastapi import APIRouter
@@ -11,8 +12,8 @@ from ..db import DATABASE_URL
 router = APIRouter()
 
 
-@router.get("/export/db")
-async def export_database() -> FileResponse:
+@router.get("/export/db", response_class=FileResponse)
+async def export_database() -> Any:
     dbfile = DATABASE_URL.replace('sqlite:///', '')
     main_db = await aiosqlite.connect(dbfile)
     db_name = Path(dbfile).name

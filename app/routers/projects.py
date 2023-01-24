@@ -1,7 +1,6 @@
 from typing import List
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -22,11 +21,23 @@ class Project(BaseModel):
 @router.get("/projects", tags=["projects"])
 async def get_projects() -> List[Project]:
     async with async_session() as session:
-        projects: List[Project] = []
-        for project in (await session.scalars(select(models.Project))).all():
-            projects.append(Project.from_orm(project))
-
+        projects: List[Project] = [
+            Project.from_orm(project)
+            for project in (await session.scalars(select(models.Project))).all()
+        ]
         return projects
+
+
+@router.get("/projects/{number}", tags=["testrun"])
+async def get_specific_project(number: str) -> Project:
+    async with async_session() as session:
+        return Project.from_orm(
+            (
+                await session.scalars(
+                    select(models.Project).where(models.Project.number == number)
+                )
+            ).one()
+        )
 
 
 @router.post("/projects", tags=["projects"])
@@ -44,7 +55,9 @@ async def create_project(project: Project) -> Project:
 @router.put("/projects/{id}", tags=["projects"])
 async def update_project(id: int, project: Project) -> Project:
     async with async_session() as session:
-        cur = (await session.scalars(select(models.Project).where(models.Project.id == id))).one()
+        cur = (
+            await session.scalars(select(models.Project).where(models.Project.id == id))
+        ).one()
 
         cur.update_from_model(project)
         await session.commit()

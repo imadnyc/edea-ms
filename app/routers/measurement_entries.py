@@ -31,10 +31,12 @@ router = APIRouter()
 @router.get("/measurement_entries", tags=["measurement_entry"])
 async def get_measurement_entries() -> List[MeasurementEntry]:
     async with async_session() as session:
-        items: List[MeasurementEntry] = []
-        for item in (await session.scalars(select(models.MeasurementEntry))).all():
-            items.append(MeasurementEntry.from_orm(item))
-
+        items: List[MeasurementEntry] = [
+            MeasurementEntry.from_orm(item)
+            for item in (
+                await session.scalars(select(models.MeasurementEntry))
+            ).all()
+        ]
         return items
 
 

@@ -1,7 +1,6 @@
 from typing import List
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -27,10 +26,28 @@ router = APIRouter()
 @router.get("/specifications", tags=["specification"])
 async def get_specifications() -> List[Specification]:
     async with async_session() as session:
-        specs: List[Specification] = []
-        for spec in (await session.scalars(select(models.Specification))).all():
-            specs.append(Specification.from_orm(spec))
+        specs: List[Specification] = [
+            Specification.from_orm(spec)
+            for spec in (await session.scalars(select(models.Specification))).all()
+        ]
+        return specs
 
+
+@router.get("/specifications/project/{project_id}", tags=["specification"])
+async def get_project_specifications(project_id: int) -> list[Specification]:
+    async with async_session() as session:
+        specs: List[Specification] = [
+            Specification.from_orm(spec)
+            for spec in (
+                (
+                    await session.scalars(
+                        select(models.Specification).where(
+                            models.Specification.project_id == project_id
+                        )
+                    )
+                ).all()
+            )
+        ]
         return specs
 
 
@@ -49,7 +66,11 @@ async def create_specification(spec: Specification) -> Specification:
 @router.put("/specifications/{id}", tags=["specification"])
 async def update_specification(id: int, spec: Specification) -> Specification:
     async with async_session() as session:
-        cur = (await session.scalars(select(models.Specification).where(models.Specification.id == id))).one()
+        cur = (
+            await session.scalars(
+                select(models.Specification).where(models.Specification.id == id)
+            )
+        ).one()
 
         cur.update_from_model(spec)
         await session.commit()

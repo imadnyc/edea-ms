@@ -1,7 +1,6 @@
 from typing import List
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -29,10 +28,12 @@ router = APIRouter()
 @router.get("/measurement_columns", tags=["measurement_column"])
 async def get_measurement_columns() -> List[MeasurementColumn]:
     async with async_session() as session:
-        columns: List[MeasurementColumn] = []
-        for column in (await session.scalars(select(models.MeasurementColumn))).all():
-            columns.append(MeasurementColumn.from_orm(column))
-
+        columns: List[MeasurementColumn] = [
+            MeasurementColumn.from_orm(column)
+            for column in (
+                await session.scalars(select(models.MeasurementColumn))
+            ).all()
+        ]
         return columns
 
 

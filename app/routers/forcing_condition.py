@@ -1,7 +1,6 @@
 from typing import List
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -13,8 +12,8 @@ class ForcingCondition(BaseModel):
         orm_mode = True
 
     id: int | None
-    measurement_column_id: int
-    test_run_id: int
+    column_id: int
+    testrun_id: int
     sequence_number: int
     numeric_value: float | None
     string_value: str | None
@@ -26,10 +25,12 @@ router = APIRouter()
 @router.get("/forcing_conditions", tags=["forcing_condition"])
 async def get_forcing_conditions() -> List[ForcingCondition]:
     async with async_session() as session:
-        items: List[ForcingCondition] = []
-        for item in (await session.scalars(select(models.ForcingCondition))).all():
-            items.append(ForcingCondition.from_orm(item))
-
+        items: List[ForcingCondition] = [
+            ForcingCondition.from_orm(item)
+            for item in (
+                await session.scalars(select(models.ForcingCondition))
+            ).all()
+        ]
         return items
 
 

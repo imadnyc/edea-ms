@@ -33,10 +33,10 @@ class NewJob(BaseModel):
 @router.get("/jobs/all", tags=["jobqueue"])
 async def get_all_jobs() -> List[Job]:
     async with async_session() as session:
-        jobs: List[Job] = []
-        for job in (await session.scalars(select(models.Job))).all():
-            jobs.append(Job.from_orm(job))
-
+        jobs: List[Job] = [
+            Job.from_orm(job)
+            for job in (await session.scalars(select(models.Job))).all()
+        ]
         return jobs
 
 

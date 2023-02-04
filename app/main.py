@@ -14,7 +14,7 @@ from .routers import (
     forcing_condition,
     export,
     jobs,
-    config, ui,
+    config,
 )
 
 description = """
@@ -25,7 +25,7 @@ tags_metadata = [
     {
         "name": "testrun",
         "description": "Used to batch related measurements (same board, same device) taken typically "
-                       "without user-interaction. Used to store metadata about the DUT.",
+        "without user-interaction. Used to store metadata about the DUT.",
     },
     {
         "name": "specification",
@@ -53,7 +53,7 @@ tags_metadata = [
     },
     {
         "name": "configuration",
-        "description": "Simple key:value store to store application configuration."
+        "description": "Simple key:value store to store application configuration.",
     },
 ]
 
@@ -78,7 +78,6 @@ app.include_router(forcing_condition.router)
 app.include_router(export.router)
 app.include_router(jobs.router)
 app.include_router(config.router)
-app.include_router(ui.router)
 
 
 @app.on_event("startup")

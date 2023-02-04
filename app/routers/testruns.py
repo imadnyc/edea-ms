@@ -131,7 +131,7 @@ async def delete_testrun(run_id: int) -> dict[str, int]:
 
 
 @router.get("/testruns/measurements/{run_id}", tags=["testrun"])
-async def testrun_measurements(run_id: int) -> dict:
+async def testrun_measurements(run_id: int) -> dict[str, Any]:
     async with async_session() as session:
         run = (
             await session.scalars(
@@ -152,12 +152,13 @@ async def testrun_measurements(run_id: int) -> dict:
                 )
             )
         ).all()
+        """
         df = pl.DataFrame(entries)
-        mcols = df.pivot(index="sequence_number")
+        mcols = df.pivot(index="sequence_number", values=None, columns=None)
 
         # TODO: combine value columns into one, but how?
-
-        return {"columns": cols, "values": mcols}
+        """
+        return {"columns": None, "values": None}
 
 
 @router.post("/testruns/setup/{run_id}", tags=["testrun"])
@@ -175,7 +176,7 @@ async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
 
         # create the columns first if they don't exist yet
         for name, values in setup.columns.items():
-            res = await session.scalars(
+            m_res = await session.scalars(
                 select(models.MeasurementColumn).where(
                     and_(
                         models.MeasurementColumn.name == name,
@@ -185,7 +186,7 @@ async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
             )
 
             try:
-                column = res.one()
+                column = m_res.one()
             except NoResultFound:
                 column = None
 

@@ -1,3 +1,12 @@
+# SAST
+stages:
+- test
+sast:
+  stage: test
+include:
+- template: Security/SAST.gitlab-ci.yml
+
+# project stages
 image: registry.gitlab.com/edea-dev/ci-runner:latest
 
 # Change pip's cache directory to be inside the project directory since we can

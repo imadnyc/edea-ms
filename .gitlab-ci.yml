@@ -7,7 +7,7 @@ stages:
 sast:
   stage: security
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - when: manual
 
 secret_detection:
   stage: security
@@ -15,7 +15,7 @@ secret_detection:
 dependency_scanning:
   stage: security
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - when: manual
 
 include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml

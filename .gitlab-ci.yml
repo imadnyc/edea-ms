@@ -6,25 +6,18 @@ stages:
 
 sast:
   stage: security
-  rules:
-    - when: manual
 
 secret_detection:
   stage: security
 
 dependency_scanning:
   stage: security
-  rules:
-    - when: manual
 
 include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/License-Scanning.gitlab-ci.yml
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
-
-# project stages
-image: registry.gitlab.com/edea-dev/ci-runner:latest
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -59,6 +52,7 @@ default:
       fi
 
 test:
+  image: registry.gitlab.com/edea-dev/ci-runner:latest
   stage: test
   script:
     - coverage run -m pytest app
@@ -72,6 +66,7 @@ test:
         path: coverage.xml
 
 typecheck:
+  image: registry.gitlab.com/edea-dev/ci-runner:latest
   stage: build
   script:
     - mypy -p app
@@ -81,6 +76,7 @@ typecheck:
 #    - pytest --test-alembic
 
 pages:
+  image: registry.gitlab.com/edea-dev/ci-runner:latest
   stage: deploy
   script:
     - cd doc

@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.get("/export/db", response_class=FileResponse)
 async def export_database() -> Any:
-    dbfile = DATABASE_URL.replace('sqlite:///', '')
+    dbfile = DATABASE_URL.replace("sqlite:///", "")
     main_db = await aiosqlite.connect(dbfile)
     db_name = Path(dbfile).name
     backup_dir = TemporaryDirectory()
@@ -29,7 +29,7 @@ async def export_database() -> Any:
     # return the database backup and remove it afterwards
     return FileResponse(
         path=backup_path,
-        media_type='application/vnd.sqlite3',
+        media_type="application/vnd.sqlite3",
         filename=db_name,
-        background=BackgroundTask(backup_dir.cleanup)
+        background=BackgroundTask(backup_dir.cleanup),
     )

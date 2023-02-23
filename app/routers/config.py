@@ -33,7 +33,13 @@ async def get_all_configuration_variables() -> List[Setting]:
 @router.get("/config/{key}", tags=["configuration"])
 async def get_specific_variable(key: str) -> Setting:
     async with async_session() as session:
-        return Setting.from_orm((await session.scalars(select(models.Setting).where(models.Setting.key == key))).one())
+        return Setting.from_orm(
+            (
+                await session.scalars(
+                    select(models.Setting).where(models.Setting.key == key)
+                )
+            ).one()
+        )
 
 
 """
@@ -62,7 +68,11 @@ async def add_variable(setting: Setting) -> Setting:
 async def update_variable(setting: Setting) -> Setting:
     async with async_session() as session:
         try:
-            cur = (await session.scalars(select(models.Setting).where(models.Setting.key == setting.key))).one()
+            cur = (
+                await session.scalars(
+                    select(models.Setting).where(models.Setting.key == setting.key)
+                )
+            ).one()
 
             cur.update_from_model(setting)
             await session.commit()

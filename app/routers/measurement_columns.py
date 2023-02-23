@@ -53,7 +53,14 @@ async def create_measurement_column(column: MeasurementColumn) -> MeasurementCol
 async def get_measurement_column(id: int) -> MeasurementColumn:
     async with async_session() as session:
         return MeasurementColumn.from_orm(
-            (await session.scalars(select(models.MeasurementColumn).where(models.MeasurementColumn.id == id))).one())
+            (
+                await session.scalars(
+                    select(models.MeasurementColumn).where(
+                        models.MeasurementColumn.id == id
+                    )
+                )
+            ).one()
+        )
 
 
 @router.delete("/measurement_columns/{id}", tags=["measurement_column"])

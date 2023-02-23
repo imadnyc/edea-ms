@@ -27,9 +27,7 @@ async def get_forcing_conditions() -> List[ForcingCondition]:
     async with async_session() as session:
         items: List[ForcingCondition] = [
             ForcingCondition.from_orm(item)
-            for item in (
-                await session.scalars(select(models.ForcingCondition))
-            ).all()
+            for item in (await session.scalars(select(models.ForcingCondition))).all()
         ]
         return items
 
@@ -46,9 +44,15 @@ async def create_forcing_conditions(condition: ForcingCondition) -> ForcingCondi
 
 
 @router.put("/forcing_conditions/{id}", tags=["forcing_condition"])
-async def update_forcing_condition(id: int, condition: ForcingCondition) -> ForcingCondition:
+async def update_forcing_condition(
+    id: int, condition: ForcingCondition
+) -> ForcingCondition:
     async with async_session() as session:
-        cur = (await session.scalars(select(models.ForcingCondition).where(models.ForcingCondition.id == id))).one()
+        cur = (
+            await session.scalars(
+                select(models.ForcingCondition).where(models.ForcingCondition.id == id)
+            )
+        ).one()
 
         cur.update_from_model(condition)
         await session.commit()

@@ -1,20 +1,22 @@
 from typing import Any
 
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
-from fastapi.responses import Response
+import sqlalchemy
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import create_async_engine
 
+from .db.models import Model
 from .routers import (
-    testruns,
-    projects,
-    specifications,
+    config,
+    export,
+    forcing_condition,
+    jobs,
     measurement_columns,
     measurement_entries,
-    forcing_condition,
-    export,
-    jobs,
-    config,
+    projects,
+    specifications,
+    testruns,
 )
 
 description = """
@@ -80,9 +82,22 @@ app.include_router(jobs.router)
 app.include_router(config.router)
 
 
+@app.exception_handler(sqlalchemy.exc.NoResultFound)
+async def sqlalchemy_no_result_found_handler(
+    request: Request, exc: sqlalchemy.exc.NoResultFound
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={"error": {"message": str(exc)}},
+    )
+
+
 @app.on_event("startup")
 async def startup() -> None:
-    pass
+    engine = create_async_engine("sqlite+aiosqlite:///edea-ms.sqlite")
+    async with engine.begin() as conn:
+        await conn.run_sync(Model.metadata.create_all)
+    # pass
     # database_ = app.state.database
     # if not database_.is_connected:
     #    await database_.connect()

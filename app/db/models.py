@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
-from typing import TypeVar, Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, ForeignKey, func
@@ -14,7 +14,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-T = TypeVar('T', bound='Model')
+T = TypeVar("T", bound="Model")
 
 
 class Model(DeclarativeBase):
@@ -39,7 +39,9 @@ class ProvidesProjectMixin:
 class ProvidesSpecificationMixin:
     "A mixin that adds a 'specification' relationship to classes."
 
-    specification_id: Mapped[int | None] = mapped_column(ForeignKey("specifications.id"))
+    specification_id: Mapped[int | None] = mapped_column(
+        ForeignKey("specifications.id")
+    )
 
     @declared_attr
     def specification(cls) -> Mapped["Specification"]:
@@ -85,6 +87,15 @@ class Specification(Model, ProvidesProjectMixin):
     maximum: Mapped[float]
 
 
+class TestRunState(int, enum.Enum):
+    NEW = 1
+    SETUP_COMPLETE = 2
+    RUNNING = 3
+    INTERRUPTED = 4
+    COMPLETE = 5
+    FAILED = 6
+
+
 class TestRun(Model, ProvidesProjectMixin):
     __tablename__: str = "testruns"
 
@@ -94,6 +105,10 @@ class TestRun(Model, ProvidesProjectMixin):
     machine_hostname: Mapped[str]
     user_name: Mapped[str]
     test_name: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    started_at: Mapped[datetime | None]
+    completed_at: Mapped[datetime | None]
+    state: Mapped[TestRunState] = mapped_column(default=TestRunState.NEW)
     data: Mapped[dict[Any, Any] | None] = mapped_column(JSON)
 
     __mapper_args__ = {"eager_defaults": True}

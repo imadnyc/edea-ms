@@ -44,7 +44,9 @@ async def get_all_jobs() -> List[Job]:
 async def get_new_job(request: Request) -> Job | None:
     async with async_session() as session:
         try:
-            res = await session.scalars(select(models.Job).where(models.Job.state == JobState.NEW))
+            res = await session.scalars(
+                select(models.Job).where(models.Job.state == JobState.NEW)
+            )
             item = res.first()
             if item is None:
                 return None
@@ -64,15 +66,22 @@ async def get_new_job(request: Request) -> Job | None:
 @router.get("/jobs/{job_id}", tags=["jobqueue"])
 async def get_specific_job(job_id: int) -> Job:
     async with async_session() as session:
-        return Job.from_orm((await session.scalars(select(models.Job).where(models.Job.id == job_id))).one())
+        return Job.from_orm(
+            (
+                await session.scalars(select(models.Job).where(models.Job.id == job_id))
+            ).one()
+        )
 
 
 @router.post("/jobs/new", tags=["jobqueue"])
 async def create_job(new_task: NewJob) -> Job:
     async with async_session() as session:
-        task = models.Job(state=JobState.NEW, updated_at=datetime.now(timezone.utc),
-                          function_call=new_task.function_call,
-                          parameters=new_task.parameters)
+        task = models.Job(
+            state=JobState.NEW,
+            updated_at=datetime.now(timezone.utc),
+            function_call=new_task.function_call,
+            parameters=new_task.parameters,
+        )
 
         session.add(task)
         await session.commit()
@@ -83,7 +92,9 @@ async def create_job(new_task: NewJob) -> Job:
 @router.put("/jobs/{job_id}", tags=["jobqueue"])
 async def update_specific_job(job_id: int, task: Job) -> Job:
     async with async_session() as session:
-        job = (await session.scalars(select(models.Job).where(models.Job.id == job_id))).one()
+        job = (
+            await session.scalars(select(models.Job).where(models.Job.id == job_id))
+        ).one()
 
         session.add(job.update_from_model(task))
         await session.commit()
@@ -95,7 +106,9 @@ async def update_specific_job(job_id: int, task: Job) -> Job:
 async def delete_job(job_id: int, request: Request) -> Job | None:
     async with async_session() as session:
         try:
-            item = (await session.scalars(select(models.Job).where(models.Job.id == job_id))).one()
+            item = (
+                await session.scalars(select(models.Job).where(models.Job.id == job_id))
+            ).one()
             if item is None:
                 return None
 

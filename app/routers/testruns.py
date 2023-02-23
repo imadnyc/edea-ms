@@ -1,21 +1,27 @@
-from typing import List, Any
+import io
+from datetime import datetime
+from enum import Enum
+from typing import Any, List
 
-from fastapi import APIRouter, Response
-from pydantic import BaseModel, Json
-from sqlalchemy import select, and_
-from sqlalchemy.exc import NoResultFound
 import polars as pl
+from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Json
+from sqlalchemy import and_, select
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
-from app.db import models, async_session
+from app.db import async_session, models
+from app.db.models import TestRunState
 
 router = APIRouter()
 
 
-class TestRun(BaseModel):
+class NewTestRun(BaseModel):
     class Config:
         orm_mode = True
 
-    id: int | None
     project_id: int
     short_code: str
     dut_id: str
@@ -23,6 +29,17 @@ class TestRun(BaseModel):
     user_name: str
     test_name: str
     data: Json[Any] | None
+
+
+class TestRun(NewTestRun):
+    class Config:
+        orm_mode = True
+
+    id: int | None
+    created_at: datetime | None
+    started_at: datetime | None
+    completed_at: datetime | None
+    state: TestRunState
 
 
 class TestColumn(BaseModel):
@@ -40,6 +57,12 @@ class TestColumn(BaseModel):
 class TestSetup(BaseModel):
     steps: list[dict[str, str | float]]
     columns: dict[str, TestColumn]
+
+
+class DataExportFormat(Enum):
+    CSV = "csv"
+    JSON = "json"
+    PARQUET = "parquet"
 
 
 @router.get("/testruns", tags=["testrun"])
@@ -84,8 +107,8 @@ async def get_project_testruns(project_id: int) -> list[TestRun]:
         return specs
 
 
-@router.post("/testruns", tags=["testrun"])
-async def create_testrun(new_run: TestRun) -> TestRun:
+@router.post("/testruns", tags=["testrun"], status_code=201)
+async def create_testrun(new_run: NewTestRun) -> TestRun:
     async with async_session() as session:
         res = await session.scalars(
             select(models.TestRun).where(
@@ -131,7 +154,78 @@ async def delete_testrun(run_id: int) -> dict[str, int]:
 
 
 @router.get("/testruns/measurements/{run_id}", tags=["testrun"])
-async def testrun_measurements(run_id: int) -> dict[str, Any]:
+async def testrun_measurements(
+    run_id: int,
+    data_format: DataExportFormat
+    | None = Query(default=DataExportFormat.JSON, alias="format"),
+) -> StreamingResponse:
+    async with async_session() as session:
+        # check if the run exists before we do other more expensive tasks
+        run = (
+            await session.scalars(
+                select(models.TestRun).where(models.TestRun.id == run_id)
+            )
+        ).one()
+
+        # aliases allow for more compact queries
+        me = aliased(models.MeasurementEntry)
+        mc = aliased(models.MeasurementColumn)
+        fc = aliased(models.ForcingCondition)
+        sp = aliased(models.Specification)
+
+        query = (
+            select(
+                me.sequence_number,
+                me.numeric_value,
+                me.string_value,
+                mc.measurement_unit,
+                fc.numeric_value.label("fc_numeric_value"),
+                fc.string_value.label("fc_string_value"),
+                sp.name.label("sp_name"),
+                sp.minimum.label("sp_min"),
+                sp.typical.label("sp_typ"),
+                sp.maximum.label("sp_max"),
+            )
+            .join(mc, mc.id == me.column_id)
+            .join(fc, fc.column_id == mc.id)
+            .join(sp, sp.id == mc.specification_id, isouter=True)
+            .where(me.testrun_id == run.id)
+            .where(fc.testrun_id == run.id)
+            .group_by(fc.sequence_number)
+        )
+
+        # execute the query
+        entries = await session.execute(query)
+
+        # the schema can't be inferred from the result tuples, so we get it from the query directly instead
+        df = pl.DataFrame(entries, schema=query.columns.keys())
+
+        f = io.BytesIO()
+
+        # polars can directly export a variety of formats which works nicely here
+        if data_format == DataExportFormat.JSON:
+            df.write_json(f)
+            media_type = "application/json"
+        elif data_format == DataExportFormat.PARQUET:
+            df.write_parquet(f)
+            media_type = "application/octet-stream"
+        elif data_format == DataExportFormat.CSV:
+            df.write_csv(f)
+            media_type = "text/csv"
+
+        f.seek(0)
+
+        headers = {}
+        if data_format != DataExportFormat.JSON:
+            headers[
+                "Content-Disposition"
+            ] = f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+
+        return StreamingResponse(f, headers=headers, media_type=media_type)
+
+
+@router.post("/testruns/setup/{run_id}", tags=["testrun"])
+async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
     async with async_session() as session:
         run = (
             await session.scalars(
@@ -139,38 +233,13 @@ async def testrun_measurements(run_id: int) -> dict[str, Any]:
             )
         ).one()
 
-        cols = await session.scalars(
-            select(models.MeasurementColumn).where(
-                models.MeasurementColumn.project_id == run.project_id
+        # check if the TestRun is already set up or in progress
+        if run.state != TestRunState.NEW:
+            raise HTTPException(
+                400,
+                f"run already in state {run.state}, started at {run.started_at} "
+                f"by {run.user_name} on {run.machine_hostname}",
             )
-        )
-
-        entries = (
-            await session.scalars(
-                select(models.MeasurementEntry).where(
-                    models.MeasurementEntry.testrun_id == run_id
-                )
-            )
-        ).all()
-        """
-        df = pl.DataFrame(entries)
-        mcols = df.pivot(index="sequence_number", values=None, columns=None)
-
-        # TODO: combine value columns into one, but how?
-        """
-        return {"columns": None, "values": None}
-
-
-@router.post("/testruns/setup/{run_id}", tags=["testrun"])
-async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
-    async with async_session() as session:
-        res = await session.scalars(
-            select(models.TestRun).where(models.TestRun.id == run_id)
-        )
-        try:
-            run = res.one()
-        except NoResultFound:
-            return Response(status_code=404)
 
         meas_cols: dict[str, models.MeasurementColumn] = {}
 
@@ -229,4 +298,67 @@ async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
 
         await session.commit()
 
-        return Response(status_code=200)
+    # finally, set the testrun state to SETUP_COMPLETE to accept measurements now
+    async with async_session() as session:
+        run = (
+            await session.scalars(
+                select(models.TestRun).where(models.TestRun.id == run_id)
+            )
+        ).one()
+        run.state = TestRunState.SETUP_COMPLETE
+        await session.commit()
+
+    return Response(status_code=200)
+
+
+async def transition_state(
+    session: AsyncSession, run_id: int, to_state: TestRunState
+) -> TestRun:
+    cur = (
+        await session.scalars(select(models.TestRun).where(models.TestRun.id == run_id))
+    ).one()
+
+    allowed = []
+
+    if cur.state == TestRunState.SETUP_COMPLETE:
+        allowed = [TestRunState.FAILED, TestRunState.INTERRUPTED, TestRunState.RUNNING]
+    elif cur.state == TestRunState.RUNNING:
+        allowed = [TestRunState.FAILED, TestRunState.INTERRUPTED, TestRunState.COMPLETE]
+
+    if to_state in allowed:
+        cur.state = to_state
+    else:
+        msg = f"testrun {run_id} not in one of the following allowed states: {allowed}"
+        raise HTTPException(status_code=400, detail=msg)
+
+    return TestRun.from_orm(cur)
+
+
+@router.put("/testruns/start/{run_id}", tags=["testrun"])
+async def start_testrun(run_id: int) -> TestRun:
+    async with async_session() as session:
+        cur = await transition_state(session, run_id, TestRunState.RUNNING)
+        cur.completed_at = datetime.now()
+        await session.commit()
+
+        return TestRun.from_orm(cur)
+
+
+@router.put("/testruns/complete/{run_id}", tags=["testrun"])
+async def complete_testrun(run_id: int) -> TestRun:
+    async with async_session() as session:
+        cur = await transition_state(session, run_id, TestRunState.COMPLETE)
+        cur.completed_at = datetime.now()
+        await session.commit()
+
+        return TestRun.from_orm(cur)
+
+
+@router.put("/testruns/fail/{run_id}", tags=["testrun"])
+async def fail_testrun(run_id: int) -> TestRun:
+    async with async_session() as session:
+        cur = await transition_state(session, run_id, TestRunState.FAILED)
+        cur.completed_at = datetime.now()
+        await session.commit()
+
+        return TestRun.from_orm(cur)

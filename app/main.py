@@ -1,4 +1,5 @@
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator
 
 import sqlalchemy
 from fastapi import FastAPI, Request
@@ -10,6 +11,7 @@ from .db.models import Model
 from .routers import (
     config,
     export,
+    files,
     forcing_condition,
     jobs,
     measurement_columns,
@@ -59,6 +61,16 @@ tags_metadata = [
     },
 ]
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    engine = create_async_engine("sqlite+aiosqlite:///edea-ms.sqlite")
+    async with engine.begin() as conn:
+        await conn.run_sync(Model.metadata.create_all)
+    yield
+    # cleanup here
+
+
 app = FastAPI(
     title="EDeA Measurement Server",
     description=description,
@@ -68,9 +80,10 @@ app = FastAPI(
         "url": "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12",
     },
     openapi_tags=tags_metadata,
+    lifespan=lifespan,
 )
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
-# app.state.database = db.database
 app.include_router(testruns.router)
 app.include_router(projects.router)
 app.include_router(specifications.router)
@@ -80,6 +93,7 @@ app.include_router(forcing_condition.router)
 app.include_router(export.router)
 app.include_router(jobs.router)
 app.include_router(config.router)
+app.include_router(files.router)
 
 
 @app.exception_handler(sqlalchemy.exc.NoResultFound)
@@ -90,25 +104,6 @@ async def sqlalchemy_no_result_found_handler(
         status_code=404,
         content={"error": {"message": str(exc)}},
     )
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    engine = create_async_engine("sqlite+aiosqlite:///edea-ms.sqlite")
-    async with engine.begin() as conn:
-        await conn.run_sync(Model.metadata.create_all)
-    # pass
-    # database_ = app.state.database
-    # if not database_.is_connected:
-    #    await database_.connect()
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    pass
-    # database_ = app.state.database
-    # if database_.is_connected:
-    #    await database_.disconnect()
 
 
 @app.get("/static/node_modules")

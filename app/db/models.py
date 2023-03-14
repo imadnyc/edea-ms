@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, ForeignKey, func
+from sqlalchemy import JSON, ForeignKey, LargeBinary, func
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -173,5 +173,18 @@ class Job(Model):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
     function_call: Mapped[str]
     parameters: Mapped[dict[Any, Any]] = mapped_column(JSON)
+
+    __mapper_args__ = {"eager_defaults": True}
+
+
+class TestrunFile(Model, ProvidesTestRunColumnMixin):
+    __tablename__: str = "testrun_files"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    filename: Mapped[str]
+    content_type: Mapped[str]
+    size: Mapped[int]
+    content: Mapped[bytes | None] = mapped_column(LargeBinary) # if blob is none, filename must be a path or URL
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     __mapper_args__ = {"eager_defaults": True}

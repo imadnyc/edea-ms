@@ -13,7 +13,7 @@ default_db = f"sqlite+aiosqlite:///{dbfile}"
 DATABASE_URL = os.getenv("DATABASE_URL", default_db)
 
 if "pytest" in sys.modules:
-    DATABASE_URL = "sqlite+aiosqlite:///.test.db"
+    DATABASE_URL = "sqlite+aiosqlite:///test.db"
 
 print(f"using DB from {DATABASE_URL}")
 engine = create_async_engine(DATABASE_URL)

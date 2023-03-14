@@ -52,3 +52,24 @@ async def test_jobqueue(client: AsyncClient) -> None:
 
     r = await client.delete(f"/jobs/{job_id}")
     assert r.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_single_file(client: AsyncClient) -> None:
+    """
+    Create, list, get, update and delete a job. Tests the whole workflow of jobs.
+    :return:
+    """
+    files = {"file": ("report.txt", "file contents", "text/plain")}
+
+    r = await client.post("/file/1", files=files)
+    if r.status_code != 200:
+        print(r.json())
+    assert r.status_code == 200
+
+    file_id = r.json()["report.txt"]
+    r = await client.get(f"/file/{file_id}")
+    assert r.status_code == 200
+
+    r = await client.delete(f"/file/{file_id}")
+    assert r.status_code == 200

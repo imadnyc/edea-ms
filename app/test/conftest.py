@@ -5,7 +5,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from ..db import override_db
+from ..db import override_db, DATABASE_URL
 from ..db.models import Model
 from ..main import app
 
@@ -29,7 +29,7 @@ def event_loop() -> Any:
 
 @pytest.fixture(autouse=True, scope="module")
 async def setup_db() -> AsyncIterable[None]:
-    engine = create_async_engine("sqlite+aiosqlite:///")
+    engine = create_async_engine(DATABASE_URL)
 
     async with engine.begin() as conn:
         await conn.run_sync(Model.metadata.drop_all)

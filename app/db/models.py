@@ -26,6 +26,16 @@ class Model(DeclarativeBase):
         return self
 
 
+class ProvidesUserMixin:
+    "A mixin that adds a 'user' relationship to classes."
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+    @declared_attr
+    def user(cls) -> Mapped["User"]:
+        return relationship("User")
+
+
 class ProvidesProjectMixin:
     "A mixin that adds a 'project' relationship to classes."
 
@@ -68,7 +78,17 @@ class ProvidesTestRunColumnMixin:
         return relationship("TestRun")
 
 
-class Project(Model):
+class User(Model):
+    __tablename__: str = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    subject: Mapped[str]
+    preferred_username: Mapped[str]
+    groups: Mapped[list[str]] = mapped_column(JSON)
+    disabled: Mapped[bool]
+
+
+class Project(Model, ProvidesUserMixin):
     __tablename__: str = "projects"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -96,7 +116,7 @@ class TestRunState(int, enum.Enum):
     FAILED = 6
 
 
-class TestRun(Model, ProvidesProjectMixin):
+class TestRun(Model, ProvidesProjectMixin, ProvidesUserMixin):
     __tablename__: str = "testruns"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -150,7 +170,7 @@ class ForcingCondition(
     string_value: Mapped[str | None]
 
 
-class Setting(Model):
+class Setting(Model, ProvidesUserMixin):
     __tablename__: str = "sysconfig"
 
     key: Mapped[str] = mapped_column(primary_key=True)
@@ -164,7 +184,7 @@ class JobState(int, enum.Enum):
     FAILED = 4
 
 
-class Job(Model):
+class Job(Model, ProvidesUserMixin):
     __tablename__: str = "jobqueue"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -184,7 +204,9 @@ class TestrunFile(Model, ProvidesTestRunColumnMixin):
     filename: Mapped[str]
     content_type: Mapped[str]
     size: Mapped[int]
-    content: Mapped[bytes | None] = mapped_column(LargeBinary) # if blob is none, filename must be a path or URL
+    content: Mapped[bytes | None] = mapped_column(
+        LargeBinary
+    )  # if blob is none, filename must be a path or URL
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     __mapper_args__ = {"eager_defaults": True}

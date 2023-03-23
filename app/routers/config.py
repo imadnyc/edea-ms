@@ -1,3 +1,4 @@
+from operator import and_
 from typing import List
 
 from fastapi import APIRouter, HTTPException
@@ -5,7 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
-from app.db import models, async_session
+from app.core.auth import CurrentUser
+from app.db import async_session, models
 
 
 class Setting(BaseModel):
@@ -20,43 +22,51 @@ router = APIRouter()
 
 
 @router.get("/config", tags=["configuration"])
-async def get_all_configuration_variables() -> List[Setting]:
+async def get_all_configuration_variables(
+    current_user: CurrentUser,
+) -> List[Setting]:
     items: List[Setting] = []
 
     async with async_session() as session:
-        for item in (await session.scalars(select(models.Setting))).all():
+        for item in (
+            await session.scalars(
+                select(models.Setting).where(models.Setting.user_id == current_user.id)
+            )
+        ).all():
             items.append(Setting.from_orm(item))
 
     return items
 
 
 @router.get("/config/{key}", tags=["configuration"])
-async def get_specific_variable(key: str) -> Setting:
+async def get_specific_variable(
+    key: str,
+    current_user: CurrentUser,
+) -> Setting:
     async with async_session() as session:
         return Setting.from_orm(
             (
                 await session.scalars(
-                    select(models.Setting).where(models.Setting.key == key)
+                    select(models.Setting).where(
+                        and_(
+                            models.Setting.key == key,
+                            models.Setting.user_id == current_user.id,
+                        )
+                    )
                 )
             ).one()
         )
 
 
-"""
-    if Setting.objects.filter(key=setting.key).exist():
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error": f"Can't add {setting.key!r}; it already exists in the database. (use PUT to update)"
-            })
-    else:
-"""
-
-
 @router.post("/config", tags=["configuration"])
-async def add_variable(setting: Setting) -> Setting:
+async def add_variable(
+    setting: Setting,
+    current_user: CurrentUser,
+) -> Setting:
     async with async_session() as session:
-        s = models.Setting(name=setting.key, value=setting.value)
+        s = models.Setting(
+            name=setting.key, value=setting.value, user_id=current_user.id
+        )
 
         session.add(s)
         await session.commit()
@@ -65,12 +75,20 @@ async def add_variable(setting: Setting) -> Setting:
 
 
 @router.put("/config", tags=["configuration"])
-async def update_variable(setting: Setting) -> Setting:
+async def update_variable(
+    setting: Setting,
+    current_user: CurrentUser,
+) -> Setting:
     async with async_session() as session:
         try:
             cur = (
                 await session.scalars(
-                    select(models.Setting).where(models.Setting.key == setting.key)
+                    select(models.Setting).where(
+                        and_(
+                            models.Setting.key == setting.key,
+                            models.Setting.user_id == current_user.id,
+                        )
+                    )
                 )
             ).one()
 
@@ -88,9 +106,22 @@ async def update_variable(setting: Setting) -> Setting:
 
 
 @router.delete("/config/{key}", tags=["configuration"])
-async def delete_variable(key: str) -> dict[str, int]:
+async def delete_variable(
+    key: str,
+    current_user: CurrentUser,
+) -> dict[str, int]:
     async with async_session() as session:
-        await session.delete(models.Setting(key=key))
+        cur = (
+            await session.scalars(
+                select(models.Setting).where(
+                    and_(
+                        models.Setting.key == key,
+                        models.Setting.user_id == current_user.id,
+                    )
+                )
+            )
+        ).one()
+        await session.delete(cur)
         await session.commit()
 
     return {"deleted_rows": 1}

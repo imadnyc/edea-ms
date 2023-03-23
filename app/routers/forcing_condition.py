@@ -4,7 +4,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from app.db import models, async_session
+from app.core.auth import CurrentUser
+from app.db import async_session, models
 
 
 class ForcingCondition(BaseModel):
@@ -23,7 +24,9 @@ router = APIRouter()
 
 
 @router.get("/forcing_conditions", tags=["forcing_condition"])
-async def get_forcing_conditions() -> List[ForcingCondition]:
+async def get_forcing_conditions(
+    current_user: CurrentUser,
+) -> List[ForcingCondition]:
     async with async_session() as session:
         items: List[ForcingCondition] = [
             ForcingCondition.from_orm(item)
@@ -33,7 +36,10 @@ async def get_forcing_conditions() -> List[ForcingCondition]:
 
 
 @router.post("/forcing_conditions", tags=["forcing_condition"])
-async def create_forcing_conditions(condition: ForcingCondition) -> ForcingCondition:
+async def create_forcing_conditions(
+    condition: ForcingCondition,
+    current_user: CurrentUser,
+) -> ForcingCondition:
     async with async_session() as session:
         cond = models.ForcingCondition()
         session.add(cond.update_from_model(condition))
@@ -45,7 +51,9 @@ async def create_forcing_conditions(condition: ForcingCondition) -> ForcingCondi
 
 @router.put("/forcing_conditions/{id}", tags=["forcing_condition"])
 async def update_forcing_condition(
-    id: int, condition: ForcingCondition
+    id: int,
+    condition: ForcingCondition,
+    current_user: CurrentUser,
 ) -> ForcingCondition:
     async with async_session() as session:
         cur = (
@@ -61,7 +69,9 @@ async def update_forcing_condition(
 
 
 @router.delete("/forcing_conditions/{id}", tags=["forcing_condition"])
-async def delete_forcing_condition(id: int) -> dict[str, int]:
+async def delete_forcing_condition(
+    id: int, current_user: CurrentUser
+) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.ForcingCondition(id=id))
         await session.commit()

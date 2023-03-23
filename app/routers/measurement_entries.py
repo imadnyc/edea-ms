@@ -1,11 +1,12 @@
 from datetime import datetime
-from typing import Any, List
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import and_, select
 from sqlalchemy.exc import NoResultFound
 
+from app.core.auth import CurrentUser
 from app.db import async_session, models
 from app.routers.measurement_columns import MeasurementColumn
 from app.routers.testruns import TestRun
@@ -27,15 +28,19 @@ class MeasurementEntry(BaseModel):
 
 router = APIRouter()
 
-
+"""
+# TODO: this is covered in a better way in the testruns router, subject to removal
 @router.get("/measurement_entries", tags=["measurement_entry"])
-async def get_measurement_entries() -> List[MeasurementEntry]:
+async def get_measurement_entries(
+    current_user: CurrentUser,
+) -> List[MeasurementEntry]:
     async with async_session() as session:
         items: List[MeasurementEntry] = [
             MeasurementEntry.from_orm(item)
             for item in (await session.scalars(select(models.MeasurementEntry))).all()
         ]
         return items
+"""
 
 
 class BatchInput(BaseModel):
@@ -45,13 +50,19 @@ class BatchInput(BaseModel):
 
 
 @router.post("/measurement_entries/batch", tags=["measurement_entry"], status_code=201)
-async def batch_create_measurement_entries(batch_input: BatchInput) -> None:
+async def batch_create_measurement_entries(
+    batch_input: BatchInput,
+    current_user: CurrentUser,
+) -> None:
     async with async_session() as session:
         test_run = TestRun.from_orm(
             (
                 await session.scalars(
                     select(models.TestRun).where(
-                        models.TestRun.id == batch_input.testrun_id
+                        and_(
+                            models.TestRun.id == batch_input.testrun_id,
+                            models.TestRun.user_id == current_user.id,
+                        )
                     )
                 )
             ).one()
@@ -101,11 +112,19 @@ async def batch_create_measurement_entries(batch_input: BatchInput) -> None:
 
 
 @router.post("/measurement_entries", tags=["measurement_entry"])
-async def create_measurement_entry(entry: MeasurementEntry) -> MeasurementEntry:
+async def create_measurement_entry(
+    entry: MeasurementEntry,
+    current_user: CurrentUser,
+) -> MeasurementEntry:
     async with async_session() as session:
         testrun = (
             await session.scalars(
-                select(models.TestRun).where(models.TestRun.id == entry.testrun_id)
+                select(models.TestRun).where(
+                    and_(
+                        models.TestRun.id == entry.testrun_id,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
             )
         ).one()
 
@@ -149,7 +168,9 @@ async def create_measurement_entry(entry: MeasurementEntry) -> MeasurementEntry:
 
 @router.put("/measurement_entries/{id}", tags=["measurement_entry"])
 async def update_measurement_entry(
-    id: int, entry: MeasurementEntry
+    id: int,
+    entry: MeasurementEntry,
+    current_user: CurrentUser,
 ) -> MeasurementEntry:
     async with async_session() as session:
         cur = (
@@ -165,7 +186,9 @@ async def update_measurement_entry(
 
 
 @router.delete("/measurement_entries/{id}", tags=["measurement_entry"])
-async def delete_measurement_entry(id: int) -> dict[str, int]:
+async def delete_measurement_entry(
+    id: int, current_user: CurrentUser
+) -> dict[str, int]:
     async with async_session() as session:
         await session.delete(models.MeasurementEntry(id=id))
         await session.commit()

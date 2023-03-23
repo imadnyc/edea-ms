@@ -42,5 +42,5 @@ async def setup_db() -> AsyncIterable[None]:
 
 @pytest.fixture(scope="module")
 async def client() -> AsyncIterable[AsyncClient]:
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(app=app, base_url="http://test", headers={"X-Webauth-User": "test-user"}) as client:
         yield client

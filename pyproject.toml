@@ -9,16 +9,18 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.94.1"
-sqlalchemy = { extras = ["asyncio"], version = "^2.0.6" }
-uvicorn = { extras = ["standard"], version = "^0.21.0" }
+fastapi = "^0.95.0"
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.7" }
+uvicorn = { extras = ["standard"], version = "^0.21.1" }
 aiosqlite = "^0.18.0"
 httpx = "^0.23.3"
 alembic = "^1.10.2"
 aiofiles = "^23.1.0"
 cython = { version = "^0.29.33", optional = true }
-polars = "^0.16.13"
+polars = "^0.16.14"
 python-multipart = "^0.0.6"
+pyjwt = "^2.6.0"
+cryptography = "^39.0.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.2"
@@ -26,11 +28,11 @@ pytest-cov = "^4.0.0"
 trio = "^0.22.0"
 mypy = "^1.1.1"
 pytest-alembic = "^0.10.0"
-sqlalchemy = { version = "^2.0.6", extras = ["mypy"] }
+sqlalchemy = { version = "^2.0.7", extras = ["mypy"] }
 sourcery-cli = { version = "^1.0.9", optional = true }
 black = { version = "^23.1.0" }
 edea-tmc = { git = "https://gitlab.com/edea-dev/edea-tmc.git", branch = "main" }
-pytest-asyncio = "^0.20.3"
+pytest-asyncio = "^0.21.0"
 numpy = "^1.24.2"
 
 [tool.poetry.group.debug]

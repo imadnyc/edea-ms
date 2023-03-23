@@ -12,6 +12,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.auth import CurrentUser
 from app.db import async_session, models
 from app.db.models import TestRunState
 
@@ -66,23 +67,34 @@ class DataExportFormat(Enum):
 
 
 @router.get("/testruns", tags=["testrun"])
-async def get_all_testruns() -> List[TestRun]:
+async def get_all_testruns(
+    current_user: CurrentUser,
+) -> List[TestRun]:
     async with async_session() as session:
         items: List[TestRun] = [
             TestRun.from_orm(item)
-            for item in (await session.scalars(select(models.TestRun))).all()
+            for item in (
+                await session.scalars(
+                    select(models.TestRun).where(
+                        models.TestRun.user_id == current_user.id
+                    )
+                )
+            ).all()
         ]
         return items
 
 
 @router.get("/testruns/short_code/{short_code}", tags=["testrun"])
-async def get_specific_testrun(short_code: str) -> TestRun:
+async def get_specific_testrun(short_code: str, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
         return TestRun.from_orm(
             (
                 await session.scalars(
                     select(models.TestRun).where(
-                        models.TestRun.short_code == short_code
+                        and_(
+                            models.TestRun.short_code == short_code,
+                            models.TestRun.user_id == current_user.id,
+                        )
                     )
                 )
             ).one()
@@ -90,7 +102,9 @@ async def get_specific_testrun(short_code: str) -> TestRun:
 
 
 @router.get("/testruns/project/{project_id}", tags=["testrun"])
-async def get_project_testruns(project_id: int) -> list[TestRun]:
+async def get_project_testruns(
+    project_id: int, current_user: CurrentUser
+) -> list[TestRun]:
     async with async_session() as session:
         specs: List[TestRun] = [
             TestRun.from_orm(run)
@@ -98,7 +112,10 @@ async def get_project_testruns(project_id: int) -> list[TestRun]:
                 (
                     await session.scalars(
                         select(models.TestRun).where(
-                            models.TestRun.project_id == project_id
+                            and_(
+                                models.TestRun.project_id == project_id,
+                                models.TestRun.user_id == current_user.id,
+                            )
                         )
                     )
                 ).all()
@@ -108,11 +125,14 @@ async def get_project_testruns(project_id: int) -> list[TestRun]:
 
 
 @router.post("/testruns", tags=["testrun"], status_code=201)
-async def create_testrun(new_run: NewTestRun) -> TestRun:
+async def create_testrun(new_run: NewTestRun, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
         res = await session.scalars(
             select(models.TestRun).where(
-                models.TestRun.short_code == new_run.short_code
+                and_(
+                    models.TestRun.short_code == new_run.short_code,
+                    models.TestRun.user_id == current_user.id,
+                )
             )
         )
         try:
@@ -121,7 +141,7 @@ async def create_testrun(new_run: NewTestRun) -> TestRun:
             run = None
 
         if run is None:
-            run = models.TestRun()
+            run = models.TestRun(user_id=current_user.id)
             run.update_from_model(new_run)
             session.add(run)
             await session.commit()
@@ -130,11 +150,20 @@ async def create_testrun(new_run: NewTestRun) -> TestRun:
 
 
 @router.put("/testruns/{run_id}", tags=["testrun"])
-async def update_testrun(run_id: int, run: TestRun) -> TestRun:
+async def update_testrun(
+    run_id: int,
+    run: TestRun,
+    current_user: CurrentUser,
+) -> TestRun:
     async with async_session() as session:
         cur = (
             await session.scalars(
-                select(models.TestRun).where(models.TestRun.id == run_id)
+                select(models.TestRun).where(
+                    and_(
+                        models.TestRun.id == run_id,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
             )
         ).one()
 
@@ -145,9 +174,19 @@ async def update_testrun(run_id: int, run: TestRun) -> TestRun:
 
 
 @router.delete("/testruns/{run_id}", tags=["testrun"])
-async def delete_testrun(run_id: int) -> dict[str, int]:
+async def delete_testrun(run_id: int, current_user: CurrentUser) -> dict[str, int]:
     async with async_session() as session:
-        await session.delete(models.TestRun(id=run_id))
+        cur = (
+            await session.scalars(
+                select(models.TestRun).where(
+                    and_(
+                        models.TestRun.id == run_id,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
+            )
+        ).one()
+        await session.delete(cur)
         await session.commit()
 
     return {"deleted_rows": 1}
@@ -156,6 +195,7 @@ async def delete_testrun(run_id: int) -> dict[str, int]:
 @router.get("/testruns/measurements/{run_id}", tags=["testrun"])
 async def testrun_measurements(
     run_id: int,
+    current_user: CurrentUser,
     data_format: DataExportFormat
     | None = Query(default=DataExportFormat.JSON, alias="format"),
 ) -> StreamingResponse:
@@ -163,7 +203,12 @@ async def testrun_measurements(
         # check if the run exists before we do other more expensive tasks
         run = (
             await session.scalars(
-                select(models.TestRun).where(models.TestRun.id == run_id)
+                select(models.TestRun).where(
+                    and_(
+                        models.TestRun.id == run_id,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
             )
         ).one()
 
@@ -225,11 +270,20 @@ async def testrun_measurements(
 
 
 @router.post("/testruns/setup/{run_id}", tags=["testrun"])
-async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
+async def setup_testrun(
+    run_id: int,
+    setup: TestSetup,
+    current_user: CurrentUser,
+) -> Response:
     async with async_session() as session:
         run = (
             await session.scalars(
-                select(models.TestRun).where(models.TestRun.id == run_id)
+                select(models.TestRun).where(
+                    and_(
+                        models.TestRun.id == run_id,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
             )
         ).one()
 
@@ -312,10 +366,20 @@ async def setup_testrun(run_id: int, setup: TestSetup) -> Response:
 
 
 async def transition_state(
-    session: AsyncSession, run_id: int, to_state: TestRunState
+    session: AsyncSession,
+    run_id: int,
+    to_state: TestRunState,
+    current_user: models.User,
 ) -> TestRun:
     cur = (
-        await session.scalars(select(models.TestRun).where(models.TestRun.id == run_id))
+        await session.scalars(
+            select(models.TestRun).where(
+                and_(
+                    models.TestRun.id == run_id,
+                    models.TestRun.user_id == current_user.id,
+                )
+            )
+        )
     ).one()
 
     allowed = []
@@ -335,9 +399,11 @@ async def transition_state(
 
 
 @router.put("/testruns/start/{run_id}", tags=["testrun"])
-async def start_testrun(run_id: int) -> TestRun:
+async def start_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
-        cur = await transition_state(session, run_id, TestRunState.RUNNING)
+        cur = await transition_state(
+            session, run_id, TestRunState.RUNNING, current_user
+        )
         cur.completed_at = datetime.now()
         await session.commit()
 
@@ -345,9 +411,11 @@ async def start_testrun(run_id: int) -> TestRun:
 
 
 @router.put("/testruns/complete/{run_id}", tags=["testrun"])
-async def complete_testrun(run_id: int) -> TestRun:
+async def complete_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
-        cur = await transition_state(session, run_id, TestRunState.COMPLETE)
+        cur = await transition_state(
+            session, run_id, TestRunState.COMPLETE, current_user
+        )
         cur.completed_at = datetime.now()
         await session.commit()
 
@@ -355,9 +423,9 @@ async def complete_testrun(run_id: int) -> TestRun:
 
 
 @router.put("/testruns/fail/{run_id}", tags=["testrun"])
-async def fail_testrun(run_id: int) -> TestRun:
+async def fail_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
-        cur = await transition_state(session, run_id, TestRunState.FAILED)
+        cur = await transition_state(session, run_id, TestRunState.FAILED, current_user)
         cur.completed_at = datetime.now()
         await session.commit()
 

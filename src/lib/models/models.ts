@@ -1,0 +1,41 @@
+
+export enum TestRunState {
+    NEW = 1,
+    SETUP_COMPLETE = 2,
+    RUNNING = 3,
+    INTERRUPTED = 4,
+    COMPLETE = 5,
+    FAILED = 6,
+
+}
+
+export type TestRun = {
+    id: number;
+    project_id: number;
+    short_code: string;
+    dut_id: string;
+    machine_hostname: string;
+    user_name: string;
+    test_name: string;
+    created_at: string;
+    started_at: string;
+    completed_at: string;
+    state: TestRunState;
+    data?: {}
+}
+
+export type Specification = {
+    id?: number;
+    project_id: number;
+    name: string;
+    unit: string;
+    minimum?: number;
+    typical?: number;
+    maximum?: number;
+}
+
+export type Project = {
+    id: number;
+    number: string;
+    name: string;
+}

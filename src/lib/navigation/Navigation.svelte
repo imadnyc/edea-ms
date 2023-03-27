@@ -1,0 +1,16 @@
+<script lang="ts">
+    import {drawerStore} from '@skeletonlabs/skeleton';
+
+    function drawerClose(): void {
+        drawerStore.close();
+    }
+</script>
+
+<nav class="list-nav p-4">
+    <ul>
+        <li><a href="/" on:click={drawerClose}>Homepage</a></li>
+        <li><a href="/projects" on:click={drawerClose}>Projects</a></li>
+        <li><a href="/testruns" on:click={drawerClose}>Testruns</a></li>
+        <li><a href="/specifications" on:click={drawerClose}>Specifications</a></li>
+    </ul>
+</nav>

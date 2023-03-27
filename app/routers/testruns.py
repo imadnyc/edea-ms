@@ -199,6 +199,10 @@ async def testrun_measurements(
     data_format: DataExportFormat
     | None = Query(default=DataExportFormat.JSON, alias="format"),
 ) -> StreamingResponse:
+    """
+    This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
+    merges them together with the results. As a last step, all columns only consisting of null values get removed.
+    """
     async with async_session() as session:
         # check if the run exists before we do other more expensive tasks
         run = (
@@ -218,32 +222,63 @@ async def testrun_measurements(
         fc = aliased(models.ForcingCondition)
         sp = aliased(models.Specification)
 
-        query = (
+        query_conditions = (
             select(
-                me.sequence_number,
-                me.numeric_value,
-                me.string_value,
-                mc.measurement_unit,
-                fc.numeric_value.label("fc_numeric_value"),
-                fc.string_value.label("fc_string_value"),
+                fc.sequence_number,
+                mc.measurement_unit.label("unit"),
+                mc.name,
+                fc.numeric_value,
+                fc.string_value,
+            )
+            .join(mc, mc.id == fc.column_id)
+            .where(fc.testrun_id == run.id)
+        )
+
+        conditions = [list(e) for e in await session.execute(query_conditions)]
+        schema_cond = {
+            c.name: c.type.python_type for c in query_conditions.selected_columns
+        }
+        cond_df = pl.DataFrame(conditions, schema=schema_cond).pivot(
+            values=["string_value", "numeric_value"],
+            index="sequence_number",
+            columns=["name", "unit"],
+        )
+
+        query_measured_entries = (
+            select(
+                me.numeric_value.label("me_numeric_value"),
+                me.string_value.label("me_string_value"),
                 sp.name.label("sp_name"),
                 sp.minimum.label("sp_min"),
                 sp.typical.label("sp_typ"),
                 sp.maximum.label("sp_max"),
             )
             .join(mc, mc.id == me.column_id)
-            .join(fc, fc.column_id == mc.id)
             .join(sp, sp.id == mc.specification_id, isouter=True)
             .where(me.testrun_id == run.id)
-            .where(fc.testrun_id == run.id)
-            .group_by(fc.sequence_number)
         )
 
-        # execute the query
-        entries = await session.execute(query)
+        measured_entries = [
+            list(e) for e in await session.execute(query_measured_entries)
+        ]
+        schema_meas = {
+            c.name: c.type.python_type for c in query_measured_entries.selected_columns
+        }
+        meas_df = pl.DataFrame(measured_entries, schema=schema_meas)
 
-        # the schema can't be inferred from the result tuples, so we get it from the query directly instead
-        df = pl.DataFrame(entries, schema=query.columns.keys())
+        df = pl.concat([cond_df, meas_df], how="horizontal")
+
+        # drop columns which are all nulls
+        df = df[[s.name for s in df if s.null_count() != df.height]]
+
+        # strip field types from forcing condition column names, they're always either or
+        mapping = {
+            col: f'fc{col.removeprefix("string_value").removeprefix("numeric_value")}'
+            for col in df.schema.keys()
+            if col.startswith("string_value_") or col.startswith("numeric_value_")
+        }
+
+        df = df.rename(mapping)
 
         f = io.BytesIO()
 

@@ -15,7 +15,7 @@
 		<tbody>
 			{#each data.projects as project}
 				<tr>
-					<td><a href="/project/{project.id}">{project.number}</a></td><td>{project.name}</td>
+					<td><a href="/project/{project.number}">{project.number}</a></td><td>{project.name}</td>
 				</tr>
 			{/each}
 		</tbody>

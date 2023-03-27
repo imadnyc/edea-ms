@@ -22,22 +22,39 @@ type Specification = {
     maximum?: number;
 }
 
-export const load = (({ fetch, params }) => {
+type Project = {
+    id: number;
+    number: string;
+    name: string;
+}
+
+export const load = (async ({ fetch, params }) => {
+    const headers = new Headers();
+    headers.append('X-Webauth-User', 'default');
+
+    const project = await fetch("/api/projects/" + params.slug, { headers })
+        .then(response => {
+            if (!response.ok) {
+                throw error(response.status, response.statusText)
+            }
+            return response.json() as Promise<Project>
+        });
+
     return {
-        testruns: fetch("/api/testruns/project/" + params.slug)
+        testruns: fetch("/api/testruns/project/" + project.id, { headers })
             .then(response => {
                 if (!response.ok) {
                     throw error(response.status, response.statusText)
                 }
                 return response.json() as Promise<TestRun[]>
             }),
-        specifications: fetch("/api/specifications/project/" + params.slug)
+        specifications: fetch("/api/specifications/project/" + project.id, { headers })
             .then(response => {
                 if (!response.ok) {
                     throw error(response.status, response.statusText)
                 }
                 return response.json() as Promise<Specification[]>
             }),
-        name: params.slug
+        project: project,
     }
 }) satisfies PageLoad;

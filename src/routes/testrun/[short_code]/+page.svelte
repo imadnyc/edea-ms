@@ -1,34 +1,17 @@
 <script lang="ts">
-    import type {PageData} from './$types';
+	import type { PageData } from './$types';
+	import SimpleTable from '$lib/tables/SimpleTable.svelte';
+	import { readable } from 'svelte/store';
 
-    export let data: PageData;
-
-    export let mc = data.measurements.columns;
+	export let data: PageData;
 </script>
 
 <div class="container mx-auto p-8 space-y-8">
-    <h1>Testrun {data.name}</h1>
+	<h1>Testrun {data.name}</h1>
 
-
-    <div class="table-container">
-        <table class="table table-hover">
-            <thead>
-            <tr>
-                {#each mc as entry}
-                    <th>{entry.name}</th>
-                {/each}
-            </tr>
-            </thead>
-            <tbody>
-            {#each mc[0].values as _, i}
-                <tr>
-                    {#each mc as entry}
-                        <td>{entry.values[i]}</td>
-                    {/each}
-                </tr>
-            {/each}
-
-            </tbody>
-        </table>
-    </div>
+	{#if data.measurements.length > 0}
+		<SimpleTable data={readable(data.measurements)} />
+	{:else}
+		<p>No Testrun data available.</p>
+	{/if}
 </div>

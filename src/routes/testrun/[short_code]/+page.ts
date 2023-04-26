@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type { TestRun, Specification } from '$lib/models/models';
+import type { TestRun } from '$lib/models/models';
 
 
 export const load = (async ({ fetch, params }) => {
@@ -22,7 +22,7 @@ export const load = (async ({ fetch, params }) => {
                 if (!response.ok) {
                     throw error(response.status, response.statusText)
                 }
-                return response.json() as Promise<{}>
+                return response.json() as Promise<Array<Object>>
             }),
         name: params.short_code
     }

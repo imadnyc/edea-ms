@@ -284,7 +284,7 @@ async def testrun_measurements(
 
         # polars can directly export a variety of formats which works nicely here
         if data_format == DataExportFormat.JSON:
-            df.write_json(f)
+            df.write_json(f, row_oriented=True)
             media_type = "application/json"
         elif data_format == DataExportFormat.PARQUET:
             df.write_parquet(f)
@@ -292,6 +292,8 @@ async def testrun_measurements(
         elif data_format == DataExportFormat.CSV:
             df.write_csv(f)
             media_type = "text/csv"
+        else:
+            raise HTTPException(423, "unknown export format")
 
         f.seek(0)
 

@@ -1,7 +1,57 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { specifications } from './store';
+	import SimpleTable from '$lib/tables/SimpleTable.svelte';
+	import { columnDef, type Column, componentColumnDef } from '$lib/tables/types';
+	import { readable } from 'svelte/store';
+	import { modalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import Actions from './actions.svelte';
 
 	export let data: PageData;
+
+	specifications.set(data.specifications);
+	let testruns = readable(data.testruns);
+
+	const specColumns: Column[] = [
+		columnDef('id', 'ID'),
+		columnDef('project_id', 'Project ID'),
+		columnDef('name', 'Name'),
+		columnDef('minimum', 'Minimum'),
+		columnDef('typical', 'Typical'),
+		columnDef('maximum', 'Maximum'),
+		columnDef('unit', 'Unit'),
+		componentColumnDef('Actions', Actions)
+	];
+
+	const testrunColumns: Column[] = [
+		columnDef('id', 'ID'),
+		columnDef('short_code', 'Short code'),
+		columnDef('dut_id', 'DUT ID'),
+		columnDef('machine_hostname', 'Machine Hostname'),
+		columnDef('user_name', 'Username'),
+		columnDef('test_name', 'Test Name')
+	];
+
+	const modalCreateSpec: ModalSettings = {
+		type: 'component',
+		title: 'New specification for ' + data.project.name,
+		body: '',
+		meta: { project_id: data.project.id },
+		// Pass the component registry key as a string:
+		component: 'modalSpecificationForm',
+		response: async (r: any) => {
+			if (r) {
+				// append new specification to the table
+				$specifications.push(r.message);
+				specifications.set($specifications);
+				modalStore.close();
+			}
+		}
+	};
+
+	function newSpec() {
+		modalStore.trigger(modalCreateSpec);
+	}
 </script>
 
 <div class="container mx-auto p-8 space-y-8">
@@ -9,55 +59,19 @@
 
 	<div>
 		<h2>Specifications</h2>
-		<div class="table-container">
-			<table class="table table-hover">
-				<thead>
-					<th>Name</th>
-					<th>Unit</th>
-					<th>Minimum</th>
-					<th>Typical</th>
-					<th>Maximum</th>
-				</thead>
-				<tbody>
-					{#each data.specifications as spec}
-						<tr>
-							<td><a href="/specification/{spec.id}">{spec.id}</a></td>
-							<td>{spec.name}</td>
-							<td>{spec.unit}</td>
-							<td>{spec.minimum}</td>
-							<td>{spec.typical}</td>
-							<td>{spec.maximum}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<button class="btn variant-filled" on:click={newSpec}>Create Specification</button>
+		{#if $specifications.length > 0}
+			<SimpleTable data={specifications} columns={specColumns} rowsPerPage={10} />
+		{:else}
+			<p>No specification data available.</p>
+		{/if}
 	</div>
 	<div>
 		<h2>Testruns</h2>
-		<div class="table-container">
-			<table class="table table-hover">
-				<thead>
-					<th>ID</th>
-					<th>Short Code</th>
-					<th>DUT ID</th>
-					<th>Machine Hostname</th>
-					<th>Username</th>
-					<th>Test name</th>
-				</thead>
-				<tbody>
-					{#each data.testruns as run}
-						<tr>
-							<td><a href="/testrun/{run.short_code}">{run.id}</a></td>
-							<td>{run.short_code}</td>
-							<td>{run.dut_id}</td>
-							<td>{run.machine_hostname}</td>
-							<td>{run.user_name}</td>
-							<td>{run.test_name}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		{#if $testruns.length > 0}
+			<SimpleTable data={testruns} columns={testrunColumns} rowsPerPage={10} />
+		{:else}
+			<p>No testruns available.</p>
+		{/if}
 	</div>
 </div>

@@ -153,4 +153,4 @@ class TestMeasurementFlow:
     async def test_get_run_results(self, client: AsyncClient) -> None:
         r = await client.get("/testruns/measurements/1")
         assert r.status_code == 200
-        assert len(r.json()["columns"][0]["values"]) == 75
+        assert len(r.json()) == 75

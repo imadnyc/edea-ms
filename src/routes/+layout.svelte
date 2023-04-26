@@ -14,6 +14,7 @@
 	import Navigation from '$lib/navigation/Navigation.svelte';
 	import { LightSwitch } from '@skeletonlabs/skeleton';
 	import SpecificationForm from '$lib/modals/SpecificationForm.svelte';
+	import ProjectForm from '$lib/modals/ProjectForm.svelte';
 
 	function drawerOpen() {
 		drawerStore.open({});
@@ -22,6 +23,9 @@
 	const modalComponentRegistry: Record<string, ModalComponent> = {
 		modalSpecificationForm: {
 			ref: SpecificationForm
+		},
+		modalProjectForm: {
+			ref: ProjectForm
 		}
 	};
 </script>

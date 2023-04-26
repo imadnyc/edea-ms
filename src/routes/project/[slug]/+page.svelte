@@ -6,6 +6,7 @@
 	import { readable } from 'svelte/store';
 	import { modalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import Actions from './actions.svelte';
+	import DetailLink from './detail_link.svelte';
 
 	export let data: PageData;
 
@@ -24,7 +25,7 @@
 	];
 
 	const testrunColumns: Column[] = [
-		columnDef('id', 'ID'),
+		componentColumnDef('ID', DetailLink),
 		columnDef('short_code', 'Short code'),
 		columnDef('dut_id', 'DUT ID'),
 		columnDef('machine_hostname', 'Machine Hostname'),

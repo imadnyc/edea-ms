@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const Project = z.object({
+    id: z.number().nullable(),
+    number: z.string(),
+    name: z.string(),
+});
+
 export const Specification = z.object({
     id: z.number().nullable(),
     project_id: z.number(),
@@ -10,4 +16,5 @@ export const Specification = z.object({
     maximum: z.number()
 });
 
+export type ProjectSchema = typeof Project
 export type SpecificationSchema = typeof Specification

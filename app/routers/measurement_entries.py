@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 from sqlalchemy.exc import NoResultFound
 
@@ -13,34 +13,19 @@ from app.routers.testruns import TestRun
 
 
 class MeasurementEntry(BaseModel):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-    id: int | None
+    id: int | None = None
     sequence_number: int
-    numeric_value: float | None
-    string_value: str | None
-    created_at: datetime | None
-    flags: int | None
+    numeric_value: float | None = None
+    string_value: str | None = None
+    created_at: datetime | None = None
+    flags: int | None = None
     column: MeasurementColumn
-    testrun_id: int | None
+    testrun_id: int | None = None
 
 
 router = APIRouter()
-
-"""
-# TODO: this is covered in a better way in the testruns router, subject to removal
-@router.get("/measurement_entries", tags=["measurement_entry"])
-async def get_measurement_entries(
-    current_user: CurrentUser,
-) -> List[MeasurementEntry]:
-    async with async_session() as session:
-        items: List[MeasurementEntry] = [
-            MeasurementEntry.from_orm(item)
-            for item in (await session.scalars(select(models.MeasurementEntry))).all()
-        ]
-        return items
-"""
 
 
 class BatchInput(BaseModel):
@@ -55,7 +40,7 @@ async def batch_create_measurement_entries(
     current_user: CurrentUser,
 ) -> None:
     async with async_session() as session:
-        test_run = TestRun.from_orm(
+        test_run = TestRun.model_validate(
             (
                 await session.scalars(
                     select(models.TestRun).where(
@@ -163,7 +148,7 @@ async def create_measurement_entry(
 
         await session.commit()
 
-    return MeasurementEntry.from_orm(entry)
+    return MeasurementEntry.model_validate(entry)
 
 
 @router.put("/measurement_entries/{id}", tags=["measurement_entry"])
@@ -182,7 +167,7 @@ async def update_measurement_entry(
         cur.update_from_model(entry)
         await session.commit()
 
-        return MeasurementEntry.from_orm(cur)
+        return MeasurementEntry.model_validate(cur)
 
 
 @router.delete("/measurement_entries/{id}", tags=["measurement_entry"])

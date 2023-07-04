@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.sql import select
@@ -15,13 +15,12 @@ router = APIRouter()
 
 
 class Job(BaseModel):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-    id: int | None
-    state: JobState | None
-    worker: str | None
-    updated_at: datetime | None
+    id: int | None = None
+    state: JobState | None = None
+    worker: str | None = None
+    updated_at: datetime | None = None
     function_call: str
     parameters: dict[Any, Any]
 
@@ -37,7 +36,7 @@ async def get_all_jobs(
 ) -> List[Job]:
     async with async_session() as session:
         jobs: List[Job] = [
-            Job.from_orm(job)
+            Job.model_validate(job)
             for job in (
                 await session.scalars(
                     select(models.Job).where(models.Job.user_id == current_user.id)
@@ -74,7 +73,7 @@ async def get_new_job(
         except NoResultFound:
             item = None
 
-        return Job.from_orm(item)
+        return Job.model_validate(item)
 
 
 @router.get("/jobs/{job_id}", tags=["jobqueue"])
@@ -82,7 +81,7 @@ async def get_specific_job(
     job_id: int, current_user: User = Depends(get_current_active_user)
 ) -> Job:
     async with async_session() as session:
-        return Job.from_orm(
+        return Job.model_validate(
             (
                 await session.scalars(
                     select(models.Job).where(
@@ -112,7 +111,7 @@ async def create_job(
         session.add(task)
         await session.commit()
 
-        return Job.from_orm(task)
+        return Job.model_validate(task)
 
 
 @router.put("/jobs/{job_id}", tags=["jobqueue"])
@@ -131,7 +130,7 @@ async def update_specific_job(
         session.add(job.update_from_model(task))
         await session.commit()
 
-        return Job.from_orm(job)
+        return Job.model_validate(job)
 
 
 @router.delete("/jobs/{job_id}", tags=["jobqueue"])
@@ -162,4 +161,4 @@ async def delete_job(
             await session.commit()
         except NoResultFound:
             item = None
-        return Job.from_orm(item)
+        return Job.model_validate(item)

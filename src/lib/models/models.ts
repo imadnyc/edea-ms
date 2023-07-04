@@ -1,3 +1,4 @@
+import type { VisualizationSpec } from "svelte-vega";
 
 export enum TestRunState {
     NEW = 1,
@@ -7,6 +8,10 @@ export enum TestRunState {
     COMPLETE = 5,
     FAILED = 6,
 
+}
+
+export type TestRunData = {
+    vega_lite?: VisualizationSpec
 }
 
 export type TestRun = {
@@ -21,7 +26,7 @@ export type TestRun = {
     started_at: string;
     completed_at: string;
     state: TestRunState;
-    data?: {}
+    data?: TestRunData;
 }
 
 export type Specification = {

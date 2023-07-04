@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 
 from app.core.auth import CurrentUser
@@ -9,18 +9,17 @@ from app.db import async_session, models
 
 
 class MeasurementColumn(BaseModel):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-    id: int | None
+    id: int | None = None
     project_id: int
-    specification_id: int | None
+    specification_id: int | None = None
     name: str
-    data_source: str | None
-    description: str | None
-    user_note: str | None
-    measurement_unit: str | None
-    flags: int | None
+    data_source: str | None = None
+    description: str | None = None
+    user_note: str | None = None
+    measurement_unit: str | None = None
+    flags: int | None = None
 
 
 router = APIRouter()
@@ -37,7 +36,7 @@ async def get_measurement_columns(
 ) -> List[MeasurementColumn]:
     async with async_session() as session:
         columns: List[MeasurementColumn] = [
-            MeasurementColumn.from_orm(column)
+            MeasurementColumn.model_validate(column)
             for column in (
                 await session.scalars(select(models.MeasurementColumn))
             ).all()
@@ -57,7 +56,7 @@ async def create_measurement_column(
         session.add(cur)
         await session.commit()
 
-        return MeasurementColumn.from_orm(cur)
+        return MeasurementColumn.model_validate(cur)
 
 
 @router.put("/measurement_columns/{id}", tags=["measurement_column"])
@@ -65,7 +64,7 @@ async def get_measurement_column(
     id: int, current_user: CurrentUser
 ) -> MeasurementColumn:
     async with async_session() as session:
-        return MeasurementColumn.from_orm(
+        return MeasurementColumn.model_validate(
             (
                 await session.scalars(
                     select(models.MeasurementColumn).where(

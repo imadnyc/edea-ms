@@ -2,7 +2,7 @@ from typing import List, Sequence
 
 import sqlalchemy
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,16 +11,15 @@ from app.db import async_session, models
 
 
 class Specification(BaseModel):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-    id: int | None
+    id: int | None = None
     project_id: int
     name: str
     unit: str
-    minimum: float | None
-    typical: float | None
-    maximum: float | None
+    minimum: float | None = None
+    typical: float | None = None
+    maximum: float | None = None
 
 
 router = APIRouter()
@@ -62,7 +61,7 @@ async def get_specifications(
     async with async_session() as session:
         project_ids = await get_user_project_ids(current_user, session)
         specs: List[Specification] = [
-            Specification.from_orm(spec)
+            Specification.model_validate(spec)
             for spec in (
                 await session.scalars(
                     select(models.Specification).where(
@@ -83,7 +82,7 @@ async def get_project_specifications(
         await has_user_project_access(project_id, current_user, session)
 
         specs: List[Specification] = [
-            Specification.from_orm(spec)
+            Specification.model_validate(spec)
             for spec in (
                 (
                     await session.scalars(
@@ -110,7 +109,7 @@ async def create_specification(
         session.add(cur)
         await session.commit()
 
-        return Specification.from_orm(cur)
+        return Specification.model_validate(cur)
 
 
 @router.put("/specifications/{id}", tags=["specification"])
@@ -131,7 +130,7 @@ async def update_specification(
         cur.update_from_model(spec)
         await session.commit()
 
-        return Specification.from_orm(cur)
+        return Specification.model_validate(cur)
 
 
 @router.delete("/specifications/{id}", tags=["specification"])

@@ -19,7 +19,7 @@ T = TypeVar("T", bound="Model")
 
 class Model(DeclarativeBase):
     def update_from_model(self: T, mod: BaseModel) -> T:
-        for field in mod.__fields_set__:
+        for field in mod.model_fields_set:
             if field != "id":
                 setattr(self, field, getattr(mod, field))
 

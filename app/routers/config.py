@@ -2,7 +2,7 @@ from operator import and_
 from typing import List
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
@@ -11,8 +11,7 @@ from app.db import async_session, models
 
 
 class Setting(BaseModel):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
     key: str
     value: str
@@ -33,7 +32,7 @@ async def get_all_configuration_variables(
                 select(models.Setting).where(models.Setting.user_id == current_user.id)
             )
         ).all():
-            items.append(Setting.from_orm(item))
+            items.append(Setting.model_validate(item))
 
     return items
 
@@ -44,7 +43,7 @@ async def get_specific_variable(
     current_user: CurrentUser,
 ) -> Setting:
     async with async_session() as session:
-        return Setting.from_orm(
+        return Setting.model_validate(
             (
                 await session.scalars(
                     select(models.Setting).where(
@@ -71,7 +70,7 @@ async def add_variable(
         session.add(s)
         await session.commit()
 
-        return Setting.from_orm(s)
+        return Setting.model_validate(s)
 
 
 @router.put("/config", tags=["configuration"])
@@ -95,7 +94,7 @@ async def update_variable(
             cur.update_from_model(setting)
             await session.commit()
 
-            return Setting.from_orm(cur)
+            return Setting.model_validate(cur)
         except NoResultFound as e:
             raise HTTPException(
                 status_code=422,

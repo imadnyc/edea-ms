@@ -1,10 +1,9 @@
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
-import sqlalchemy
+import sqlalchemy.exc
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from .db.models import Model
@@ -83,7 +82,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(testruns.router)
 app.include_router(projects.router)
 app.include_router(specifications.router)

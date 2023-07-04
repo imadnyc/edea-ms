@@ -6,7 +6,7 @@ from typing import Any, List
 import polars as pl
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Json
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +20,7 @@ router = APIRouter()
 
 
 class NewTestRun(BaseModel):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
     project_id: int
     short_code: str
@@ -29,17 +28,16 @@ class NewTestRun(BaseModel):
     machine_hostname: str
     user_name: str
     test_name: str
-    data: Json[Any] | None
+    data: dict[Any, Any] | None = None
 
 
 class TestRun(NewTestRun):
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-    id: int | None
-    created_at: datetime | None
-    started_at: datetime | None
-    completed_at: datetime | None
+    id: int | None = None
+    created_at: datetime | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     state: TestRunState
 
 
@@ -48,11 +46,11 @@ class TestColumn(BaseModel):
     MeasurementColumn with a few fields omitted
     """
 
-    data_source: str | None
-    description: str | None
-    user_note: str | None
-    measurement_unit: str | None
-    flags: int | None
+    data_source: str | None = None
+    description: str | None = None
+    user_note: str | None = None
+    measurement_unit: str | None = None
+    flags: int | None = None
 
 
 class TestSetup(BaseModel):
@@ -72,7 +70,7 @@ async def get_all_testruns(
 ) -> List[TestRun]:
     async with async_session() as session:
         items: List[TestRun] = [
-            TestRun.from_orm(item)
+            TestRun.model_validate(item)
             for item in (
                 await session.scalars(
                     select(models.TestRun).where(
@@ -87,12 +85,29 @@ async def get_all_testruns(
 @router.get("/testruns/short_code/{short_code}", tags=["testrun"])
 async def get_specific_testrun(short_code: str, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
-        return TestRun.from_orm(
+        return TestRun.model_validate(
             (
                 await session.scalars(
                     select(models.TestRun).where(
                         and_(
                             models.TestRun.short_code == short_code,
+                            models.TestRun.user_id == current_user.id,
+                        )
+                    )
+                )
+            ).one()
+        )
+
+
+@router.get("/testruns/{id}", tags=["testrun"])
+async def get_testrun_by_id(id: int, current_user: CurrentUser) -> TestRun:
+    async with async_session() as session:
+        return TestRun.model_validate(
+            (
+                await session.scalars(
+                    select(models.TestRun).where(
+                        and_(
+                            models.TestRun.id == id,
                             models.TestRun.user_id == current_user.id,
                         )
                     )
@@ -107,7 +122,7 @@ async def get_project_testruns(
 ) -> list[TestRun]:
     async with async_session() as session:
         specs: List[TestRun] = [
-            TestRun.from_orm(run)
+            TestRun.model_validate(run)
             for run in (
                 (
                     await session.scalars(
@@ -146,7 +161,7 @@ async def create_testrun(new_run: NewTestRun, current_user: CurrentUser) -> Test
             session.add(run)
             await session.commit()
 
-        return TestRun.from_orm(run)
+        return TestRun.model_validate(run)
 
 
 @router.put("/testruns/{run_id}", tags=["testrun"])
@@ -170,7 +185,7 @@ async def update_testrun(
         cur.update_from_model(run)
         await session.commit()
 
-        return TestRun.from_orm(cur)
+        return TestRun.model_validate(cur)
 
 
 @router.delete("/testruns/{run_id}", tags=["testrun"])
@@ -242,6 +257,7 @@ async def testrun_measurements(
             values=["string_value", "numeric_value"],
             index="sequence_number",
             columns=["name", "unit"],
+            aggregate_function="first",
         )
 
         query_measured_entries = (
@@ -432,7 +448,7 @@ async def transition_state(
         msg = f"testrun {run_id} not in one of the following allowed states: {allowed}"
         raise HTTPException(status_code=400, detail=msg)
 
-    return TestRun.from_orm(cur)
+    return TestRun.model_validate(cur)
 
 
 @router.put("/testruns/start/{run_id}", tags=["testrun"])
@@ -444,7 +460,7 @@ async def start_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
         cur.completed_at = datetime.now()
         await session.commit()
 
-        return TestRun.from_orm(cur)
+        return TestRun.model_validate(cur)
 
 
 @router.put("/testruns/complete/{run_id}", tags=["testrun"])
@@ -456,7 +472,7 @@ async def complete_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
         cur.completed_at = datetime.now()
         await session.commit()
 
-        return TestRun.from_orm(cur)
+        return TestRun.model_validate(cur)
 
 
 @router.put("/testruns/fail/{run_id}", tags=["testrun"])
@@ -466,4 +482,4 @@ async def fail_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
         cur.completed_at = datetime.now()
         await session.commit()
 
-        return TestRun.from_orm(cur)
+        return TestRun.model_validate(cur)

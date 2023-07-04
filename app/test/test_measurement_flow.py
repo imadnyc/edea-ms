@@ -118,7 +118,7 @@ class TestMeasurementFlow:
             assert r.status_code == 200
 
     async def test_measurement_run(self, client: AsyncClient) -> None:
-        runner = MeasurementRunner("http://test", "X5678")
+        runner = MeasurementRunner("http://test", "X5678", client=client)
 
         test_parameters = {
             "Source_V": [3, 4, 5],
@@ -147,7 +147,6 @@ class TestMeasurementFlow:
             "TR01",
             "TEST_DEV",
             "first test",
-            client=client,
         )
 
     async def test_get_run_results(self, client: AsyncClient) -> None:

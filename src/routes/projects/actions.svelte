@@ -19,7 +19,7 @@
 
 			if (response.ok) {
 				const t: ToastSettings = {
-					message: 'Specification deleted',
+					message: 'Project deleted',
 					background: 'variant-filled-success'
 				};
 				toastStore.trigger(t);

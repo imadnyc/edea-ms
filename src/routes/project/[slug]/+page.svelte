@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { specifications } from './store';
+	import { specifications, selected_ids } from './store';
 	import SimpleTable from '$lib/tables/SimpleTable.svelte';
 	import { columnDef, type Column, componentColumnDef } from '$lib/tables/types';
 	import { readable } from 'svelte/store';
 	import { modalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import Actions from './actions.svelte';
 	import DetailLink from './detail_link.svelte';
+	import CheckBox from './select_box.svelte';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 
@@ -25,6 +27,7 @@
 	];
 
 	const testrunColumns: Column[] = [
+		componentColumnDef('Select', CheckBox),
 		componentColumnDef('ID', DetailLink),
 		columnDef('short_code', 'Short code'),
 		columnDef('dut_id', 'DUT ID'),
@@ -53,6 +56,11 @@
 	function newSpec() {
 		modalStore.trigger(modalCreateSpec);
 	}
+
+	function compareTestruns() {
+		let values = Array.from($selected_ids.values());
+		goto(`/project/compare?id=${data.project.number}&testruns=${values.join()}`);
+	}
 </script>
 
 <div class="container mx-auto p-8 space-y-8">
@@ -70,6 +78,14 @@
 	<div>
 		<h2>Testruns</h2>
 		{#if $testruns.length > 0}
+			<div>
+				{#if $selected_ids.size > 1}
+					<button class="btn variant-filled" on:click={compareTestruns}>Compare Selected</button>
+				{:else}
+					<button class="btn variant-filled" disabled>Compare Selected</button>
+				{/if}
+				<p>Only testruns with charts can be compared for now.</p>
+			</div>
 			<SimpleTable data={testruns} columns={testrunColumns} rowsPerPage={10} />
 		{:else}
 			<p>No testruns available.</p>

@@ -15,23 +15,23 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.35.1",
-		"@skeletonlabs/skeleton": "^1.8.0",
+		"@skeletonlabs/skeleton": "^1.9.0",
 		"@sveltejs/adapter-auto": "^2.1.0",
-		"@sveltejs/kit": "^1.21.0",
+		"@sveltejs/kit": "^1.22.0",
 		"@tailwindcss/forms": "^0.5.3",
 		"@tailwindcss/typography": "^0.5.9",
 		"@typescript-eslint/eslint-plugin": "^5.61.0",
 		"@typescript-eslint/parser": "^5.61.0",
-		"@vincjo/datatables": "^1.10.7",
+		"@vincjo/datatables": "^1.10.9",
 		"autoprefixer": "^10.4.14",
 		"eslint": "^8.44.0",
 		"eslint-config-prettier": "^8.8.0",
-		"eslint-plugin-svelte3": "^4.0.0",
+		"eslint-plugin-svelte": "^2.32.2",
 		"postcss": "^8.4.24",
 		"postcss-load-config": "^4.0.1",
 		"prettier": "^2.8.8",
 		"prettier-plugin-svelte": "^2.10.1",
-		"svelte": "^3.59.1",
+		"svelte": "^4.0.4",
 		"svelte-check": "^3.4.4",
 		"svelte-hero-icons": "^5.0.0",
 		"svelte-preprocess": "^5.0.4",
@@ -45,6 +45,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"svelte-vega": "^2.0.0"
+		"vega-lite": "^5.12.0",
+		"vega-embed": "^6.22.1"
 	}
 }

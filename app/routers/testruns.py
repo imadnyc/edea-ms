@@ -1,10 +1,10 @@
 import io
 from datetime import datetime
 from enum import Enum
-from typing import Any, List
+from typing import Annotated, Any, List
 
 import polars as pl
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.core.auth import CurrentUser
+from app.core.helpers import tr_unique_field, tryint
 from app.db import async_session, models
 from app.db.models import TestRunState
 
@@ -23,7 +24,7 @@ class NewTestRun(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     project_id: int
-    short_code: str
+    short_code: str | None = None
     dut_id: str
     machine_hostname: str
     user_name: str
@@ -82,59 +83,50 @@ async def get_all_testruns(
         return items
 
 
-@router.get("/testruns/short_code/{short_code}", tags=["testrun"])
-async def get_specific_testrun(short_code: str, current_user: CurrentUser) -> TestRun:
-    async with async_session() as session:
-        return TestRun.model_validate(
-            (
-                await session.scalars(
-                    select(models.TestRun).where(
-                        and_(
-                            models.TestRun.short_code == short_code,
-                            models.TestRun.user_id == current_user.id,
-                        )
-                    )
-                )
-            ).one()
+@router.get("/testruns/{ident}", tags=["testrun"])
+async def get_testrun(
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> TestRun:
+    """
+    Get a testrun by numeric id or short-code string
+
+    - **id**: int id or short code str
+    """
+    q = select(models.TestRun).where(
+        and_(
+            tr_unique_field(ident) == ident,
+            models.TestRun.user_id == current_user.id,
         )
+    )
 
-
-@router.get("/testruns/{id}", tags=["testrun"])
-async def get_testrun_by_id(id: int, current_user: CurrentUser) -> TestRun:
     async with async_session() as session:
-        return TestRun.model_validate(
-            (
-                await session.scalars(
-                    select(models.TestRun).where(
-                        and_(
-                            models.TestRun.id == id,
-                            models.TestRun.user_id == current_user.id,
-                        )
-                    )
-                )
-            ).one()
-        )
+        return TestRun.model_validate((await session.scalars(q)).one())
 
 
-@router.get("/testruns/project/{project_id}", tags=["testrun"])
+@router.get("/testruns/project/{ident}", tags=["testrun"])
 async def get_project_testruns(
-    project_id: int, current_user: CurrentUser
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> list[TestRun]:
+    """
+    Retrieve all testruns for a project
+
+    - **id**: project id or project number string
+    """
+
     async with async_session() as session:
-        specs: List[TestRun] = [
-            TestRun.model_validate(run)
-            for run in (
-                (
-                    await session.scalars(
-                        select(models.TestRun).where(
-                            and_(
-                                models.TestRun.project_id == project_id,
-                                models.TestRun.user_id == current_user.id,
-                            )
-                        )
-                    )
-                ).all()
+        # check if it's a project number and iff, get the project id
+        if isinstance(ident, str):
+            project_q = select(models.Project).where(models.Project.number == ident)
+            ident = (await session.scalars(project_q)).one().id
+
+        q = select(models.TestRun).where(
+            and_(
+                models.Project.id == ident,
+                models.TestRun.user_id == current_user.id,
             )
+        )
+        specs: List[TestRun] = [
+            TestRun.model_validate(run) for run in ((await session.scalars(q)).all())
         ]
         return specs
 
@@ -164,9 +156,9 @@ async def create_testrun(new_run: NewTestRun, current_user: CurrentUser) -> Test
         return TestRun.model_validate(run)
 
 
-@router.put("/testruns/{run_id}", tags=["testrun"])
+@router.put("/testruns/{ident}", tags=["testrun"])
 async def update_testrun(
-    run_id: int,
+    ident: Annotated[int | str, Depends(tryint)],
     run: TestRun,
     current_user: CurrentUser,
 ) -> TestRun:
@@ -175,7 +167,7 @@ async def update_testrun(
             await session.scalars(
                 select(models.TestRun).where(
                     and_(
-                        models.TestRun.id == run_id,
+                        tr_unique_field(ident) == ident,
                         models.TestRun.user_id == current_user.id,
                     )
                 )
@@ -189,13 +181,15 @@ async def update_testrun(
 
 
 @router.delete("/testruns/{run_id}", tags=["testrun"])
-async def delete_testrun(run_id: int, current_user: CurrentUser) -> dict[str, int]:
+async def delete_testrun(
+    run_id: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> dict[str, int]:
     async with async_session() as session:
         cur = (
             await session.scalars(
                 select(models.TestRun).where(
                     and_(
-                        models.TestRun.id == run_id,
+                        tr_unique_field(run_id) == run_id,
                         models.TestRun.user_id == current_user.id,
                     )
                 )
@@ -207,9 +201,9 @@ async def delete_testrun(run_id: int, current_user: CurrentUser) -> dict[str, in
     return {"deleted_rows": 1}
 
 
-@router.get("/testruns/measurements/{run_id}", tags=["testrun"])
+@router.get("/testruns/measurements/{ident}", tags=["testrun"])
 async def testrun_measurements(
-    run_id: int,
+    ident: Annotated[int | str, Depends(tryint)],
     current_user: CurrentUser,
     data_format: DataExportFormat
     | None = Query(default=DataExportFormat.JSON, alias="format"),
@@ -218,13 +212,14 @@ async def testrun_measurements(
     This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
     merges them together with the results. As a last step, all columns only consisting of null values get removed.
     """
+
     async with async_session() as session:
         # check if the run exists before we do other more expensive tasks
         run = (
             await session.scalars(
                 select(models.TestRun).where(
                     and_(
-                        models.TestRun.id == run_id,
+                        tr_unique_field(ident) == ident,
                         models.TestRun.user_id == current_user.id,
                     )
                 )
@@ -322,18 +317,20 @@ async def testrun_measurements(
         return StreamingResponse(f, headers=headers, media_type=media_type)
 
 
-@router.post("/testruns/setup/{run_id}", tags=["testrun"])
+@router.post("/testruns/setup/{ident}", tags=["testrun"])
 async def setup_testrun(
-    run_id: int,
+    ident: Annotated[int | str, Depends(tryint)],
     setup: TestSetup,
     current_user: CurrentUser,
 ) -> Response:
+    unique_field = tr_unique_field(ident)
+
     async with async_session() as session:
         run = (
             await session.scalars(
                 select(models.TestRun).where(
                     and_(
-                        models.TestRun.id == run_id,
+                        unique_field == ident,
                         models.TestRun.user_id == current_user.id,
                     )
                 )
@@ -408,9 +405,7 @@ async def setup_testrun(
     # finally, set the testrun state to SETUP_COMPLETE to accept measurements now
     async with async_session() as session:
         run = (
-            await session.scalars(
-                select(models.TestRun).where(models.TestRun.id == run_id)
-            )
+            await session.scalars(select(models.TestRun).where(unique_field == ident))
         ).one()
         run.state = TestRunState.SETUP_COMPLETE
         await session.commit()
@@ -420,20 +415,18 @@ async def setup_testrun(
 
 async def transition_state(
     session: AsyncSession,
-    run_id: int,
+    run_id: int | str,
     to_state: TestRunState,
     current_user: models.User,
 ) -> TestRun:
-    cur = (
-        await session.scalars(
-            select(models.TestRun).where(
-                and_(
-                    models.TestRun.id == run_id,
-                    models.TestRun.user_id == current_user.id,
-                )
-            )
+    q = select(models.TestRun).where(
+        and_(
+            tr_unique_field(run_id) == run_id,
+            models.TestRun.user_id == current_user.id,
         )
-    ).one()
+    )
+
+    cur = (await session.scalars(q)).one()
 
     allowed = []
 
@@ -451,11 +444,25 @@ async def transition_state(
     return TestRun.model_validate(cur)
 
 
-@router.put("/testruns/start/{run_id}", tags=["testrun"])
-async def start_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
+@router.put("/testruns/start/{ident}", tags=["testrun"])
+async def start_testrun(
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> TestRun:
+    async with async_session() as session:
+        cur = await transition_state(session, ident, TestRunState.RUNNING, current_user)
+        cur.completed_at = datetime.now()
+        await session.commit()
+
+        return TestRun.model_validate(cur)
+
+
+@router.put("/testruns/complete/{ident}", tags=["testrun"])
+async def complete_testrun(
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> TestRun:
     async with async_session() as session:
         cur = await transition_state(
-            session, run_id, TestRunState.RUNNING, current_user
+            session, ident, TestRunState.COMPLETE, current_user
         )
         cur.completed_at = datetime.now()
         await session.commit()
@@ -463,22 +470,12 @@ async def start_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
         return TestRun.model_validate(cur)
 
 
-@router.put("/testruns/complete/{run_id}", tags=["testrun"])
-async def complete_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
+@router.put("/testruns/fail/{ident}", tags=["testrun"])
+async def fail_testrun(
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> TestRun:
     async with async_session() as session:
-        cur = await transition_state(
-            session, run_id, TestRunState.COMPLETE, current_user
-        )
-        cur.completed_at = datetime.now()
-        await session.commit()
-
-        return TestRun.model_validate(cur)
-
-
-@router.put("/testruns/fail/{run_id}", tags=["testrun"])
-async def fail_testrun(run_id: int, current_user: CurrentUser) -> TestRun:
-    async with async_session() as session:
-        cur = await transition_state(session, run_id, TestRunState.FAILED, current_user)
+        cur = await transition_state(session, ident, TestRunState.FAILED, current_user)
         cur.completed_at = datetime.now()
         await session.commit()
 

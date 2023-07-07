@@ -1,10 +1,11 @@
-from typing import List
+from typing import Annotated, List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 
 from app.core.auth import CurrentUser
+from app.core.helpers import prj_unique_field, tryint
 from app.db import async_session, models
 
 router = APIRouter()
@@ -36,15 +37,17 @@ async def get_projects(
         return projects
 
 
-@router.get("/projects/{number}", tags=["testrun"])
-async def get_specific_project(number: str, current_user: CurrentUser) -> Project:
+@router.get("/projects/{ident}", tags=["testrun"])
+async def get_specific_project(
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> Project:
     async with async_session() as session:
         return Project.model_validate(
             (
                 await session.scalars(
                     select(models.Project).where(
                         and_(
-                            models.Project.number == number,
+                            prj_unique_field(ident) == ident,
                             models.Project.user_id == current_user.id,
                         )
                     )
@@ -65,9 +68,9 @@ async def create_project(project: Project, current_user: CurrentUser) -> Project
         return Project.model_validate(cur)
 
 
-@router.put("/projects/{id}", tags=["projects"])
+@router.put("/projects/{ident}", tags=["projects"])
 async def update_project(
-    id: int,
+    ident: Annotated[int | str, Depends(tryint)],
     project: Project,
     current_user: CurrentUser,
 ) -> Project:
@@ -76,7 +79,7 @@ async def update_project(
             await session.scalars(
                 select(models.Project).where(
                     and_(
-                        models.Project.id == id,
+                        prj_unique_field(ident) == ident,
                         models.Project.user_id == current_user.id,
                     )
                 )
@@ -89,14 +92,16 @@ async def update_project(
         return Project.model_validate(cur)
 
 
-@router.delete("/projects/{id}", tags=["projects"])
-async def delete_project(id: int, current_user: CurrentUser) -> dict[str, int]:
+@router.delete("/projects/{ident}", tags=["projects"])
+async def delete_project(
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+) -> dict[str, int]:
     async with async_session() as session:
         cur = (
             await session.scalars(
                 select(models.Project).where(
                     and_(
-                        models.Project.id == id,
+                        prj_unique_field(ident) == ident,
                         models.Project.user_id == current_user.id,
                     )
                 )

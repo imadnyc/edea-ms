@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const Project = z.object({
     id: z.number().nullable(),
-    number: z.string(),
+    short_code: z.string().nullable(),
     name: z.string(),
 });
 

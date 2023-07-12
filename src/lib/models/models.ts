@@ -41,6 +41,6 @@ export type Specification = {
 
 export type Project = {
     id: number;
-    number: string;
+    short_code: string;
     name: string;
 }

@@ -59,7 +59,7 @@
 
 	function compareTestruns() {
 		let values = Array.from($selected_ids.values());
-		goto(`/project/compare?id=${data.project.number}&testruns=${values.join()}`);
+		goto(`/project/compare?id=${data.project.id}&testruns=${values.join()}`);
 	}
 </script>
 

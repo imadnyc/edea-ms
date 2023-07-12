@@ -113,7 +113,7 @@ class TestMeasurementFlow:
         r = await client.get("/projects/X5678")
         if r.status_code == 404:
             r = await client.post(
-                "/projects", json={"number": "X5678", "name": "test_project"}
+                "/projects", json={"short_code": "X5678", "name": "test_project"}
             )
             assert r.status_code == 200
 

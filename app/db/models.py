@@ -92,7 +92,7 @@ class Project(Model, ProvidesUserMixin):
     __tablename__: str = "projects"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    number: Mapped[str]
+    short_code: Mapped[str | None] = mapped_column(unique=True)
     name: Mapped[str]
 
 
@@ -120,7 +120,7 @@ class TestRun(Model, ProvidesProjectMixin, ProvidesUserMixin):
     __tablename__: str = "testruns"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    short_code: Mapped[str] = mapped_column(unique=True)  # String(max_length=4)
+    short_code: Mapped[str | None] = mapped_column(unique=True)  # String(max_length=4)
     dut_id: Mapped[str]
     machine_hostname: Mapped[str]
     user_name: Mapped[str]

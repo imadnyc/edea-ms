@@ -114,9 +114,9 @@ async def get_project_testruns(
     """
 
     async with async_session() as session:
-        # check if it's a project number and iff, get the project id
+        # check if it's a project short code and iff, get the project id
         if isinstance(ident, str):
-            project_q = select(models.Project).where(models.Project.number == ident)
+            project_q = select(models.Project).where(models.Project.short_code == ident)
             ident = (await session.scalars(project_q)).one().id
 
         q = select(models.TestRun).where(

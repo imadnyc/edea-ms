@@ -11,11 +11,11 @@ async def tryint(ident: str) -> int | str:
 
 def tr_unique_field(
     id: int | str,
-) -> InstrumentedAttribute[int] | InstrumentedAttribute[str]:
+) -> InstrumentedAttribute[int] | InstrumentedAttribute[str | None]:
     return models.TestRun.short_code if isinstance(id, str) else models.TestRun.id
 
 
 def prj_unique_field(
     id: int | str,
-) -> InstrumentedAttribute[int] | InstrumentedAttribute[str]:
-    return models.Project.number if isinstance(id, str) else models.Project.id
+) -> InstrumentedAttribute[int] | InstrumentedAttribute[str | None]:
+    return models.Project.short_code if isinstance(id, str) else models.Project.id

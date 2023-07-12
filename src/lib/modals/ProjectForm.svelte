@@ -32,7 +32,7 @@
 	if (row) {
 		$form.id = row.id;
 		$form.name = row.name;
-		$form.number = row.number;
+		$form.short_code = row.short_code;
 	}
 
 	function formClose() {
@@ -55,17 +55,17 @@
 			<input type="hidden" name="id" bind:value={$form.id} />
 		{/if}
 		<label class="label">
-			<span>Number</span>
+			<span>Short Code</span>
 			<input
-				name="number"
+				name="short_code"
 				class="input"
 				type="text"
-				data-invalid={$errors.number}
-				bind:value={$form.number}
-				{...$constraints.number}
+				data-invalid={$errors.short_code}
+				bind:value={$form.short_code}
+				{...$constraints.short_code}
 				placeholder="Enter internal project designator..."
 			/>
-			{#if $errors.number}<span class="invalid">{$errors.number}</span>{/if}
+			{#if $errors.short_code}<span class="invalid">{$errors.short_code}</span>{/if}
 		</label>
 		<label class="label">
 			<span>Name</span>

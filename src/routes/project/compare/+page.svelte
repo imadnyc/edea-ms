@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 
-	import { VegaLite } from '$lib/svelte-vega';
+	import { VegaLite } from 'svelte-vega';
 
 	export let data: PageData;
 </script>

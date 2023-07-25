@@ -3,7 +3,7 @@
 	import SimpleTable from '$lib/tables/SimpleTable.svelte';
 	import { readable } from 'svelte/store';
 
-	import { VegaLite } from '$lib/svelte-vega';
+	import { VegaLite } from 'svelte-vega';
 
 	export let data: PageData;
 

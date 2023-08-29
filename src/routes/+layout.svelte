@@ -1,22 +1,24 @@
 <script lang="ts">
-	import '../theme.postcss';
-	import '@skeletonlabs/skeleton/styles/skeleton.css';
 	import '../app.postcss';
 	import {
 		AppBar,
 		AppShell,
 		Drawer,
-		drawerStore,
+		getDrawerStore,
 		Modal,
 		Toast,
-		type ModalComponent
+		type ModalComponent,
+		initializeStores
 	} from '@skeletonlabs/skeleton';
 	import Navigation from '$lib/navigation/Navigation.svelte';
 	import { LightSwitch } from '@skeletonlabs/skeleton';
 	import SpecificationForm from '$lib/modals/SpecificationForm.svelte';
 	import ProjectForm from '$lib/modals/ProjectForm.svelte';
 
+	initializeStores();
+
 	function drawerOpen() {
+		let drawerStore = getDrawerStore();
 		drawerStore.open({});
 	}
 
@@ -39,7 +41,7 @@
 <AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-64">
 	<svelte:fragment slot="header">
 		<!-- App Bar -->
-		<AppBar background="bg-primary-500">
+		<AppBar shadow="shadow-2xl">
 			<svelte:fragment slot="lead">
 				<div class="flex items-center">
 					<button class="lg:hidden btn btn-sm mr-4" on:click={drawerOpen}>
@@ -51,31 +53,37 @@
 							</svg>
 						</span>
 					</button>
-					<strong class="text-xl uppercase">EDeA</strong>
+					<a class="lg:!ml-0 w-[48px] lg:w-auto overflow-hidden" href="/">
+						<img src="/icon.svg" alt="EDeA logo" class="w-12 pl-2 pr-2" />
+					</a>
 				</div>
 			</svelte:fragment>
 			<svelte:fragment slot="trail">
 				<a
-					class="btn btn-sm variant-ghost-surface"
+					class="btn btn-sm variant-filled"
 					href="https://blog.edea.dev"
 					target="_blank"
-					rel="noreferrer"
 				>
 					Blog
 				</a>
 				<a
-					class="btn btn-sm variant-ghost-surface"
+					class="btn btn-sm variant-filled"
+					href="https://edea-dev.gitlab.io/edea-ms/"
+					target="_blank"
+				>
+					Docs
+				</a>
+				<a
+					class="btn btn-sm variant-filled"
 					href="https://tmc.edea.dev"
 					target="_blank"
-					rel="noreferrer"
 				>
 					TMC Docs
 				</a>
 				<a
-					class="btn btn-sm variant-ghost-surface"
+					class="btn btn-sm variant-filled"
 					href="https://gitlab.com/edea-dev/edea-ms"
 					target="_blank"
-					rel="noreferrer"
 				>
 					GitLab
 				</a>

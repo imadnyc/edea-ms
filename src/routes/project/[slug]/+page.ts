@@ -29,10 +29,7 @@ type Project = {
 }
 
 export const load = (async ({ fetch, params }) => {
-    const headers = new Headers();
-    headers.append('X-Webauth-User', 'default');
-
-    const project = await fetch("/api/projects/" + params.slug, { headers })
+    const project = await fetch("/api/projects/" + params.slug)
         .then(response => {
             if (!response.ok) {
                 throw error(response.status, response.statusText)
@@ -41,14 +38,14 @@ export const load = (async ({ fetch, params }) => {
         });
 
     return {
-        testruns: fetch("/api/testruns/project/" + project.id, { headers })
+        testruns: fetch("/api/testruns/project/" + project.id)
             .then(response => {
                 if (!response.ok) {
                     throw error(response.status, response.statusText)
                 }
                 return response.json() as Promise<TestRun[]>
             }),
-        specifications: fetch("/api/specifications/project/" + project.id, { headers })
+        specifications: fetch("/api/specifications/project/" + project.id)
             .then(response => {
                 if (!response.ok) {
                     throw error(response.status, response.statusText)

@@ -43,4 +43,14 @@ export type Project = {
     id: number;
     short_code: string;
     name: string;
+    groups: string[];
+}
+
+export type User = {
+    id: number;
+    subject: string;
+    displayname: string;
+    groups: string[];
+    roles: string[];
+    disabled?: boolean;
 }

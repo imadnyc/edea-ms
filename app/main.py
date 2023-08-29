@@ -6,6 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from app.core.auth import AuthenticationMiddleware
+
 from .db.models import Model
 from .routers import (
     config,
@@ -18,6 +20,7 @@ from .routers import (
     projects,
     specifications,
     testruns,
+    users,
 )
 
 description = """
@@ -82,6 +85,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(AuthenticationMiddleware)
+
 app.include_router(testruns.router)
 app.include_router(projects.router)
 app.include_router(specifications.router)
@@ -92,6 +97,7 @@ app.include_router(export.router)
 app.include_router(jobs.router)
 app.include_router(config.router)
 app.include_router(files.router)
+app.include_router(users.router)
 
 
 @app.exception_handler(sqlalchemy.exc.NoResultFound)
@@ -101,6 +107,32 @@ async def sqlalchemy_no_result_found_handler(
     return JSONResponse(
         status_code=404,
         content={"error": {"message": str(exc)}},
+    )
+
+
+@app.exception_handler(sqlalchemy.exc.IntegrityError)
+async def sqlalchemy_integrity_error(
+    request: Request, exc: sqlalchemy.exc.IntegrityError
+) -> JSONResponse:
+    # error_code: int | None = None
+    msg = str(exc.orig)
+    err = {"error": {"message": msg}}
+
+    # if hasattr(exc.orig, "sqlite_errorcode"):
+    #    error_code = getattr(exc.orig, "sqlite_errorcode")
+
+    if msg.startswith("UNIQUE constraint failed"):
+        constraint = msg[25:]
+        if "." in constraint:
+            constraint = constraint.split(".")[1]
+        err["error"]["field"] = constraint
+        err["error"]["type"] = "unique_violation"
+
+    # TODO: support postgres exception format too
+
+    return JSONResponse(
+        status_code=422,
+        content=err,
     )
 
 

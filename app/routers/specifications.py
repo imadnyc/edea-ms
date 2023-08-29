@@ -1,6 +1,8 @@
-from typing import List, Sequence
+from operator import or_
+from typing import List
 
 import sqlalchemy
+import sqlalchemy.exc
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
@@ -8,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentUser
 from app.db import async_session, models
+from app.db.queries import common_project_ids
 
 
 class Specification(BaseModel):
@@ -25,16 +28,6 @@ class Specification(BaseModel):
 router = APIRouter()
 
 
-async def get_user_project_ids(
-    current_user: models.User, session: AsyncSession
-) -> Sequence[int]:
-    return (
-        await session.scalars(
-            select(models.Project.id).where(models.Project.user_id == current_user.id)
-        )
-    ).all()
-
-
 async def has_user_project_access(
     project_id: int, current_user: models.User, session: AsyncSession
 ) -> None:
@@ -44,7 +37,10 @@ async def has_user_project_access(
                 select(models.Project).where(
                     and_(
                         models.Project.id == project_id,
-                        models.Project.user_id == current_user.id,
+                        or_(
+                            models.Project.user_id == current_user.id,
+                            models.Project.id.in_(common_project_ids(current_user)),
+                        ),
                     )
                 )
             )
@@ -52,25 +48,6 @@ async def has_user_project_access(
     except sqlalchemy.exc.NoResultFound as e:
         # TODO: handle user access exception
         raise e
-
-
-@router.get("/specifications", tags=["specification"])
-async def get_specifications(
-    current_user: CurrentUser,
-) -> List[Specification]:
-    async with async_session() as session:
-        project_ids = await get_user_project_ids(current_user, session)
-        specs: List[Specification] = [
-            Specification.model_validate(spec)
-            for spec in (
-                await session.scalars(
-                    select(models.Specification).where(
-                        models.Specification.project_id.in_(project_ids)
-                    )
-                )
-            ).all()
-        ]
-        return specs
 
 
 @router.get("/specifications/project/{project_id}", tags=["specification"])
@@ -96,7 +73,7 @@ async def get_project_specifications(
         return specs
 
 
-@router.post("/specifications", tags=["specification"])
+@router.post("/specifications", tags=["specification"], status_code=201)
 async def create_specification(
     spec: Specification, current_user: CurrentUser
 ) -> Specification:
@@ -136,14 +113,14 @@ async def update_specification(
 @router.delete("/specifications/{id}", tags=["specification"])
 async def delete_specification(id: int, current_user: CurrentUser) -> dict[str, int]:
     async with async_session() as session:
-        project_ids = await get_user_project_ids(current_user, session)
-
         spec = (
             await session.scalars(
                 select(models.Specification).where(
                     and_(
                         models.Specification.id == id,
-                        models.Specification.project_id.in_(project_ids),
+                        models.Specification.project_id.in_(
+                            common_project_ids(current_user)
+                        ),
                     )
                 )
             )

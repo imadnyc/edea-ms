@@ -12,9 +12,20 @@ async def test_root(client: AsyncClient) -> None:
 
 @pytest.mark.anyio
 async def test_export_db(client: AsyncClient) -> None:
-    response = await client.get("/export/db")
+    response = await client.get(
+        "/export/db",
+        headers={
+            "X-Webauth-User": "backup-bot",
+            "X-Webauth-Roles": "backup,automation",
+        },
+    )
     assert response.status_code == 200
-    # assert len(response.content) >= 40000
+
+
+@pytest.mark.anyio
+async def test_export_db_fail(client: AsyncClient) -> None:
+    response = await client.get("/export/db")
+    assert response.status_code == 403
 
 
 @pytest.mark.anyio

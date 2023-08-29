@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Annotated, Any, List
 
@@ -7,7 +7,7 @@ import polars as pl
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -16,6 +16,7 @@ from app.core.auth import CurrentUser
 from app.core.helpers import tr_unique_field, tryint
 from app.db import async_session, models
 from app.db.models import TestRunState
+from app.db.queries import common_project_ids
 
 router = APIRouter()
 
@@ -75,10 +76,42 @@ async def get_all_testruns(
             for item in (
                 await session.scalars(
                     select(models.TestRun).where(
-                        models.TestRun.user_id == current_user.id
+                        or_(
+                            models.TestRun.user_id == current_user.id,
+                            models.TestRun.project_id.in_(
+                                common_project_ids(current_user)
+                            ),
+                        )
                     )
                 )
             ).all()
+        ]
+        return items
+
+
+@router.get("/testruns/overview", tags=["testrun"])
+async def testruns_overview(
+    current_user: CurrentUser,
+) -> List[TestRun]:
+    """
+    testruns_overview returns up to the five most recent testruns from the last 7 days.
+    """
+    q = (
+        select(models.TestRun)
+        .where(
+            or_(
+                models.TestRun.user_id == current_user.id,
+                models.TestRun.project_id.in_(common_project_ids(current_user)),
+            )
+        )
+        .where(models.TestRun.created_at >= datetime.now() - timedelta(days=7))
+        .order_by(models.TestRun.created_at.desc())
+        .limit(5)
+    )
+
+    async with async_session() as session:
+        items: List[TestRun] = [
+            TestRun.model_validate(item) for item in (await session.scalars(q)).all()
         ]
         return items
 
@@ -92,10 +125,14 @@ async def get_testrun(
 
     - **id**: int id or short code str
     """
+
     q = select(models.TestRun).where(
         and_(
             tr_unique_field(ident) == ident,
-            models.TestRun.user_id == current_user.id,
+            or_(
+                models.TestRun.user_id == current_user.id,
+                models.TestRun.project_id.in_(common_project_ids(current_user)),
+            ),
         )
     )
 
@@ -121,8 +158,11 @@ async def get_project_testruns(
 
         q = select(models.TestRun).where(
             and_(
-                models.Project.id == ident,
-                models.TestRun.user_id == current_user.id,
+                models.TestRun.project_id == ident,
+                or_(
+                    models.TestRun.user_id == current_user.id,
+                    models.TestRun.project_id.in_(common_project_ids(current_user)),
+                ),
             )
         )
         specs: List[TestRun] = [
@@ -138,7 +178,10 @@ async def create_testrun(new_run: NewTestRun, current_user: CurrentUser) -> Test
             select(models.TestRun).where(
                 and_(
                     models.TestRun.short_code == new_run.short_code,
-                    models.TestRun.user_id == current_user.id,
+                    or_(
+                        models.TestRun.user_id == current_user.id,
+                        models.TestRun.project_id.in_(common_project_ids(current_user)),
+                    ),
                 )
             )
         )
@@ -180,16 +223,16 @@ async def update_testrun(
         return TestRun.model_validate(cur)
 
 
-@router.delete("/testruns/{run_id}", tags=["testrun"])
+@router.delete("/testruns/{ident}", tags=["testrun"])
 async def delete_testrun(
-    run_id: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> dict[str, int]:
     async with async_session() as session:
         cur = (
             await session.scalars(
                 select(models.TestRun).where(
                     and_(
-                        tr_unique_field(run_id) == run_id,
+                        tr_unique_field(ident) == ident,
                         models.TestRun.user_id == current_user.id,
                     )
                 )
@@ -220,7 +263,12 @@ async def testrun_measurements(
                 select(models.TestRun).where(
                     and_(
                         tr_unique_field(ident) == ident,
-                        models.TestRun.user_id == current_user.id,
+                        or_(
+                            models.TestRun.user_id == current_user.id,
+                            models.TestRun.project_id.in_(
+                                common_project_ids(current_user)
+                            ),
+                        ),
                     )
                 )
             )
@@ -418,7 +466,7 @@ async def transition_state(
     run_id: int | str,
     to_state: TestRunState,
     current_user: models.User,
-) -> TestRun:
+) -> models.TestRun:
     q = select(models.TestRun).where(
         and_(
             tr_unique_field(run_id) == run_id,
@@ -441,7 +489,7 @@ async def transition_state(
         msg = f"testrun {run_id} not in one of the following allowed states: {allowed}"
         raise HTTPException(status_code=400, detail=msg)
 
-    return TestRun.model_validate(cur)
+    return cur
 
 
 @router.put("/testruns/start/{ident}", tags=["testrun"])
@@ -450,7 +498,8 @@ async def start_testrun(
 ) -> TestRun:
     async with async_session() as session:
         cur = await transition_state(session, ident, TestRunState.RUNNING, current_user)
-        cur.completed_at = datetime.now()
+        cur.started_at = datetime.now()
+        session.add(cur)
         await session.commit()
 
         return TestRun.model_validate(cur)
@@ -465,6 +514,7 @@ async def complete_testrun(
             session, ident, TestRunState.COMPLETE, current_user
         )
         cur.completed_at = datetime.now()
+        session.add(cur)
         await session.commit()
 
         return TestRun.model_validate(cur)
@@ -477,6 +527,7 @@ async def fail_testrun(
     async with async_session() as session:
         cur = await transition_state(session, ident, TestRunState.FAILED, current_user)
         cur.completed_at = datetime.now()
+        session.add(cur)
         await session.commit()
 
         return TestRun.model_validate(cur)

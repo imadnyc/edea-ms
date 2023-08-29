@@ -5,16 +5,23 @@ export type Column = {
     header: string;
     sortable: boolean;
     filterable: boolean;
-    component: ComponentType;
+    component?: ComponentType;
+    translate?: ((v: any) => string);
 };
 
-export function columnDef(key: string, header: string, sortable?: boolean, filterable?: boolean, component?: any): Column {
+export interface IColumnOptions {
+    sortable?: boolean;
+    filterable?: boolean;
+    translate?: ((v: any) => string);
+}
+
+export function columnDef(key: string, header: string, options?: IColumnOptions): Column {
     return {
         key: key,
         header: header,
-        sortable: sortable || false,
-        filterable: filterable || false,
-        component: component
+        sortable: options?.sortable || false,
+        filterable: options?.filterable || false,
+        translate: options?.translate || undefined
     }
 }
 
@@ -24,6 +31,7 @@ export function componentColumnDef(header: string, component: ComponentType): Co
         header: header,
         sortable: false,
         filterable: false,
-        component: component
+        component: component,
+        translate: undefined
     }
 }

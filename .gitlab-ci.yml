@@ -14,8 +14,7 @@ dependency_scanning:
   stage: security
 
 include:
-  - template: Security/Dependency-Scanning.gitlab-ci.yml
-  - template: Security/License-Scanning.gitlab-ci.yml
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
 
@@ -51,7 +50,7 @@ default:
         echo "~/.cargo/env does not exist, assuming this is an included stage"
       fi
 
-test:
+test-server:
   image: registry.gitlab.com/edea-dev/ci-runner:latest
   stage: test
   script:
@@ -64,6 +63,19 @@ test:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
+
+test-ui:
+  image: mcr.microsoft.com/playwright:v1.37.1-jammy
+  stage: test
+  script:
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update; apt-get install -qq software-properties-common; add-apt-repository ppa:deadsnakes/ppa
+    - apt-get update; apt-get install -qq python3.11; curl -sSL https://install.python-poetry.org | python3 -
+    - export PATH="/root/.local/bin:$PATH"
+    - poetry install
+    - npm install
+    - nohup poetry run uvicorn app.main:app &
+    - npx playwright test
 
 typecheck:
   image: registry.gitlab.com/edea-dev/ci-runner:latest

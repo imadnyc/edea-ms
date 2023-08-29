@@ -4,13 +4,15 @@
 	import SimpleTable from '$lib/tables/SimpleTable.svelte';
 	import { columnDef, type Column, componentColumnDef } from '$lib/tables/types';
 	import { readable } from 'svelte/store';
-	import { modalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import Actions from './actions.svelte';
 	import DetailLink from './detail_link.svelte';
 	import CheckBox from './select_box.svelte';
 	import { goto } from '$app/navigation';
+	import type { Row } from '@vincjo/datatables';
 
 	export let data: PageData;
+	const modalStore = getModalStore();
 
 	specifications.set(data.specifications);
 	let testruns = readable(data.testruns);
@@ -46,7 +48,7 @@
 		response: async (r: any) => {
 			if (r) {
 				// append new specification to the table
-				$specifications.push(r.message);
+				$specifications.push(r);
 				specifications.set($specifications);
 				modalStore.close();
 			}
@@ -61,22 +63,20 @@
 		let values = Array.from($selected_ids.values());
 		goto(`/project/compare?id=${data.project.id}&testruns=${values.join()}`);
 	}
+
+	function rowSelected(e: CustomEvent<Row>) {
+		goto(`/testrun/${e.detail.id}`);
+	}
 </script>
 
 <div class="container mx-auto p-8 space-y-8">
-	<h1>Project {data.project.name}</h1>
+	<h1 class="h1">
+		{data.project.name}{#if data.project.number}
+			({data.project.number}){/if}
+	</h1>
 
-	<div>
-		<h2>Specifications</h2>
-		<button class="btn variant-filled" on:click={newSpec}>Create Specification</button>
-		{#if $specifications.length > 0}
-			<SimpleTable data={specifications} columns={specColumns} rowsPerPage={10} />
-		{:else}
-			<p>No specification data available.</p>
-		{/if}
-	</div>
-	<div>
-		<h2>Testruns</h2>
+	<section class="space-y-2">
+		<h2 class="h2">Testruns</h2>
 		{#if $testruns.length > 0}
 			<div>
 				{#if $selected_ids.size > 1}
@@ -86,9 +86,26 @@
 				{/if}
 				<p>Only testruns with charts can be compared for now.</p>
 			</div>
-			<SimpleTable data={testruns} columns={testrunColumns} rowsPerPage={10} />
+			<SimpleTable
+				data={testruns}
+				columns={testrunColumns}
+				rowsPerPage={10}
+				on:selected={rowSelected}
+			/>
 		{:else}
 			<p>No testruns available.</p>
 		{/if}
-	</div>
+	</section>
+	<hr />
+	<section class="space-y-2">
+		<div class="flex justify-between">
+			<h2 class="h2">Specifications</h2>
+			<button class="btn variant-filled" on:click={newSpec}>New</button>
+		</div>
+		{#if $specifications.length > 0}
+			<SimpleTable data={specifications} columns={specColumns} rowsPerPage={10} />
+		{:else}
+			<p>No specification data available.</p>
+		{/if}
+	</section>
 </div>

@@ -4,9 +4,12 @@
 
 	import { Icon, Pencil, Trash } from 'svelte-hero-icons';
 
-	import { toastStore, modalStore } from '@skeletonlabs/skeleton';
+	import { getToastStore, getModalStore } from '@skeletonlabs/skeleton';
 	import type { ToastSettings, ModalSettings } from '@skeletonlabs/skeleton';
 	import { specifications } from './store';
+
+	const modalStore = getModalStore();
+	const toastStore = getToastStore();
 
 	async function deleteSpecification(id: number) {
 		try {
@@ -71,8 +74,8 @@
 			response: async (r: any) => {
 				if (r) {
 					// change the modified specification
-					let index = $specifications.findIndex((x) => x.id == r.message.id);
-					$specifications[index] = r.message;
+					let index = $specifications.findIndex((x) => x.id == r.id);
+					$specifications[index] = r;
 					specifications.set($specifications);
 					modalStore.close();
 				}
@@ -83,11 +86,11 @@
 	}
 </script>
 
-<span class="chip variant-soft hover:variant-filled" on:click={editRow}>
+<button class="chip variant-soft hover:variant-filled" on:click={editRow}>
 	<span><Icon size="12" src={Pencil} /></span>
 	<span>Edit</span>
-</span>
-<span class="chip variant-soft hover:variant-filled" on:click={confirmDelete}>
+</button>
+<button class="chip variant-soft hover:variant-filled" on:click={confirmDelete}>
 	<span><Icon size="12" src={Trash} /></span>
 	<span>Delete</span>
-</span>
+</button>

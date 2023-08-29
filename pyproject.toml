@@ -9,32 +9,32 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.100.0"
-sqlalchemy = { extras = ["asyncio"], version = "^2.0.18" }
-uvicorn = { extras = ["standard"], version = "^0.22.0" }
+fastapi = "^0.103.0"
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.20" }
+uvicorn = { extras = ["standard"], version = "^0.23.2" }
 aiosqlite = "^0.19.0"
 httpx = "^0.24.1"
-alembic = "^1.11.1"
-aiofiles = "^23.1.0"
-cython = { version = "^0.29.36", optional = true }
-polars = "^0.18.6"
+alembic = "^1.11.3"
+aiofiles = "^23.2.1"
+cython = { version = "^3.0.2", optional = true }
+polars = "^0.18.15"
 python-multipart = "^0.0.6"
-pyjwt = "^2.7.0"
-cryptography = "^41.0.2"
+pyjwt = "^2.8.0"
+cryptography = "^41.0.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"
-trio = "^0.22.1"
-mypy = "^1.4.1"
+trio = "^0.22.2"
+mypy = "^1.5.1"
 pytest-alembic = "^0.10.7"
-sqlalchemy = { version = "^2.0.18", extras = ["mypy"] }
-sourcery-cli = { version = "^1.5.0", optional = true }
+sqlalchemy = { version = "^2.0.20", extras = ["mypy"] }
+sourcery-cli = { version = "^1.8.0", optional = true }
 black = { version = "^23.7.0" }
 edea-tmc = { git = "https://gitlab.com/edea-dev/edea-tmc.git", branch = "main" }
 pytest-asyncio = "^0.21.1"
-numpy = "^1.25.1"
-pydantic = "^2.0.2"
+numpy = "^1.25.2"
+pydantic = "^2.3.0"
 
 [tool.poetry.group.debug]
 optional = true

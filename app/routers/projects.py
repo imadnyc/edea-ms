@@ -7,16 +7,26 @@ from sqlalchemy import and_, select
 from app.core.auth import CurrentUser
 from app.core.helpers import prj_unique_field, tryint
 from app.db import async_session, models
+from app.db.queries import all_projects, single_project
 
 router = APIRouter()
+
+
+class NewProject(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    short_code: str | None = None
+    name: str
+    groups: list[str] | None = None
 
 
 class Project(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int | None = None
-    short_code: str
+    id: int
+    short_code: str | None = None
     name: str
+    groups: list[str]
 
 
 @router.get("/projects", tags=["projects"])
@@ -26,13 +36,7 @@ async def get_projects(
     async with async_session() as session:
         projects: List[Project] = [
             Project.model_validate(project)
-            for project in (
-                await session.scalars(
-                    select(models.Project).where(
-                        models.Project.user_id == current_user.id
-                    )
-                )
-            ).all()
+            for project in (await session.scalars(all_projects(current_user))).all()
         ]
         return projects
 
@@ -43,24 +47,19 @@ async def get_specific_project(
 ) -> Project:
     async with async_session() as session:
         return Project.model_validate(
-            (
-                await session.scalars(
-                    select(models.Project).where(
-                        and_(
-                            prj_unique_field(ident) == ident,
-                            models.Project.user_id == current_user.id,
-                        )
-                    )
-                )
-            ).one()
+            (await session.scalars(single_project(current_user, ident))).one()
         )
 
 
 @router.post("/projects", tags=["projects"])
-async def create_project(project: Project, current_user: CurrentUser) -> Project:
+async def create_project(project: NewProject, current_user: CurrentUser) -> Project:
     async with async_session() as session:
         cur = models.Project(user_id=current_user.id)
         cur.update_from_model(project)
+
+        # explicitely set to empty list of groups if it's not set
+        if project.groups is None:
+            cur.groups = []
 
         session.add(cur)
         await session.commit()

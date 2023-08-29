@@ -4,17 +4,17 @@
 
 	import { Icon, Pencil, Trash } from 'svelte-hero-icons';
 
-	import { toastStore, modalStore } from '@skeletonlabs/skeleton';
+	import { getToastStore, getModalStore } from '@skeletonlabs/skeleton';
 	import type { ToastSettings, ModalSettings } from '@skeletonlabs/skeleton';
-	import { projects } from './store';
+	import { projects, user } from './store';
+
+	const modalStore = getModalStore();
+	const toastStore = getToastStore();
 
 	async function deleteSpecification(id: number) {
 		try {
-			const headers = new Headers();
-			headers.append('X-WebAuth-User', 'default');
 			const response = await fetch('/api/projects/' + id, {
-				method: 'DELETE',
-				headers: headers
+				method: 'DELETE'
 			});
 
 			if (response.ok) {
@@ -46,7 +46,7 @@
 		}
 	}
 
-	async function confirmDelete(e: MouseEvent) {
+	async function confirmDelete(e: Event) {
 		let spec_name = row['name'];
 		const confirm: ModalSettings = {
 			type: 'confirm',
@@ -60,12 +60,12 @@
 		modalStore.trigger(confirm);
 	}
 
-	async function editRow(e: MouseEvent) {
+	async function editRow(e: Event) {
 		const modalEditProject: ModalSettings = {
 			type: 'component',
-			title: 'Updating Project ' + row.name,
+			title: 'Updating ' + row.name,
 			body: '',
-			meta: { row: row, method: 'PUT' },
+			meta: { row: row, method: 'PUT', groups: $user.groups },
 			// Pass the component registry key as a string:
 			component: 'modalProjectForm',
 			response: async (r: any) => {
@@ -83,11 +83,15 @@
 	}
 </script>
 
-<span class="chip variant-soft hover:variant-filled" on:click={editRow}>
+<button class="chip variant-soft hover:variant-filled" on:click={editRow} on:keypress={editRow}>
 	<span><Icon size="12" src={Pencil} /></span>
 	<span>Edit</span>
-</span>
-<span class="chip variant-soft hover:variant-filled" on:click={confirmDelete}>
+</button>
+<button
+	class="chip variant-soft hover:variant-filled"
+	on:click={confirmDelete}
+	on:keypress={confirmDelete}
+>
 	<span><Icon size="12" src={Trash} /></span>
 	<span>Delete</span>
-</span>
+</button>

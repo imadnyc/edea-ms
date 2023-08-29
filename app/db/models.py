@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, ForeignKey, LargeBinary, func
+from sqlalchemy import JSON, ForeignKey, LargeBinary, UniqueConstraint, func
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -83,8 +83,9 @@ class User(Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     subject: Mapped[str]
-    preferred_username: Mapped[str]
+    displayname: Mapped[str]
     groups: Mapped[list[str]] = mapped_column(JSON)
+    roles: Mapped[list[str]] = mapped_column(JSON)
     disabled: Mapped[bool]
 
 
@@ -94,6 +95,7 @@ class Project(Model, ProvidesUserMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     short_code: Mapped[str | None] = mapped_column(unique=True)
     name: Mapped[str]
+    groups: Mapped[list[str]] = mapped_column(JSON)
 
 
 class Specification(Model, ProvidesProjectMixin):
@@ -172,8 +174,11 @@ class ForcingCondition(
 
 class Setting(Model, ProvidesUserMixin):
     __tablename__: str = "sysconfig"
+    __table_args__ = (UniqueConstraint("key", "user_id"),)
 
-    key: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    key: Mapped[str]
     value: Mapped[str]
 
 

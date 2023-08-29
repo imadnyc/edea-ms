@@ -3,10 +3,7 @@ import { getTestRunData } from "$lib/helpers";
 
 
 export const load = (async ({ fetch, params }) => {
-    const headers = new Headers();
-    headers.append('X-Webauth-User', 'default');
-
-    const { run, measurements } = await getTestRunData(fetch, params.id, headers);
+    const { run, measurements } = await getTestRunData(fetch, params.id);
 
     return {
         testrun: run,

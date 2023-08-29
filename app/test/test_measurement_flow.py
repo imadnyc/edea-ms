@@ -95,7 +95,7 @@ class VirtualDCDC(Stepper):
         return pin / vin
 
     def get_vout(self) -> float:
-        return self.set_vout if self.vin > self.set_vout else 0.0
+        return self.set_vout if self.source.get_voltage() > self.set_vout else 0.0
 
     def step(self, set_point: str | float) -> StepResult:
         if set_point == "i_in":
@@ -113,7 +113,12 @@ class TestMeasurementFlow:
         r = await client.get("/projects/X5678")
         if r.status_code == 404:
             r = await client.post(
-                "/projects", json={"short_code": "X5678", "name": "test_project"}
+                "/projects",
+                json={
+                    "short_code": "X5678",
+                    "name": "test_project",
+                    "groups": ["group_a", "group_b"],
+                },
             )
             assert r.status_code == 200
 
@@ -153,3 +158,14 @@ class TestMeasurementFlow:
         r = await client.get("/testruns/measurements/1")
         assert r.status_code == 200
         assert len(r.json()) == 75
+
+    async def test_get_project_runs(self, client: AsyncClient) -> None:
+        r = await client.get("/testruns/project/X5678")
+        assert r.status_code == 200
+
+    async def test_testruns_overview(self, client: AsyncClient) -> None:
+        r = await client.get("/testruns/overview")
+        assert r.status_code == 200
+
+        tr = r.json()
+        assert len(tr) > 0

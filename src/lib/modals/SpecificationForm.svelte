@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms/client';
-	import SuperDebug from 'sveltekit-superforms/client/SuperDebug.svelte';
+	import { superForm, superValidateSync } from 'sveltekit-superforms/client';
+	// import SuperDebug from 'sveltekit-superforms/client/SuperDebug.svelte';
 
 	// Props
 	/** Exposes parent props to this component. */
 	export let parent: any;
 	// Stores
-	import { modalStore } from '@skeletonlabs/skeleton';
+	import { getModalStore } from '@skeletonlabs/skeleton';
+	import { SpecificationSchema } from '$lib/schemas';
+	import { submitForm } from '$lib/helpers';
 
 	// Modal metadata, default to create modal but should also work as update form
+	const modalStore = getModalStore();
+	
 	const form_id = $modalStore[0].meta?.form_id || 'create-specification-form';
 	const project_id = $modalStore[0].meta?.project_id || $modalStore[0].meta?.row.project_id;
 	const row = $modalStore[0].meta?.row || undefined;
@@ -18,32 +22,33 @@
 	const cHeader = 'text-2xl font-bold';
 	const cForm = 'border border-surface-500 p-4 space-y-4 rounded-container-token';
 
-	const { form, errors, enhance, constraints } = superForm(parent.form, {
-		onUpdated({ form }) {
-			if (form.valid) {
-				modalStoreUpdate(form);
-			}
-		},
-		id: form_id
-	});
+	const { form, errors, enhance, constraints } = superForm(
+		superValidateSync(row, SpecificationSchema),
+		{
+			SPA: true,
+			validators: SpecificationSchema,
+			async onUpdate({ form }) {
+				if (form.valid) {
+					const d = await submitForm('specifications', form);
+
+					if ($modalStore[0]?.response) {
+						$modalStore[0].response(d);
+					}
+					modalStore.close();
+				}
+			},
+			id: form_id,
+			applyAction: false // if set to true, this triggers onUpdated immediately after opening the modal again
+		}
+	);
 
 	$form.project_id = project_id;
 
 	if (row) {
 		$form.id = row.id;
-		$form.name = row.name;
-		$form.unit = row.unit;
-		$form.minimum = row.minimum;
-		$form.typical = row.typical;
-		$form.maximum = row.maximum;
 	}
 
 	function formClose() {
-		modalStore.close();
-	}
-
-	function modalStoreUpdate(form: any) {
-		if ($modalStore[0]?.response) $modalStore[0].response(form);
 		modalStore.close();
 	}
 </script>
@@ -89,7 +94,7 @@
 			<input
 				name="minimum"
 				class="input"
-				type="text"
+				type="number"
 				data-invalid={$errors.minimum}
 				bind:value={$form.minimum}
 				{...$constraints.minimum}
@@ -102,7 +107,7 @@
 			<input
 				name="typical"
 				class="input"
-				type="text"
+				type="number"
 				data-invalid={$errors.typical}
 				bind:value={$form.typical}
 				{...$constraints.typical}
@@ -115,7 +120,7 @@
 			<input
 				name="maximum"
 				class="input"
-				type="text"
+				type="number"
 				data-invalid={$errors.maximum}
 				bind:value={$form.maximum}
 				{...$constraints.maximum}

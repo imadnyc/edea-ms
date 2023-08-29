@@ -1,9 +1,11 @@
-import type { Project } from '$lib/models/models';
-import type {PageLoad} from './$types';
+import type { Project, User } from '$lib/models/models';
+import type { PageLoad } from './$types';
 
-export const load = (async ({fetch, params}) => {
-    const headers = new Headers();
-    headers.append('X-WebAuth-User', 'default');
-    const resp = await fetch("/api/projects", {headers});
-    return {projects: await (resp.json() as Promise<Project[]>)}
+export const load = (async ({ fetch, params }) => {
+    const projects = await fetch("/api/projects");
+    const user = await fetch("/api/users/self");
+    return {
+        projects: await (projects.json() as Promise<Project[]>),
+        user: await (user.json() as Promise<User>)
+    }
 }) satisfies PageLoad;

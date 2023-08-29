@@ -23,7 +23,7 @@ router = APIRouter()
 @router.get("/config", tags=["configuration"])
 async def get_all_configuration_variables(
     current_user: CurrentUser,
-) -> List[Setting]:
+) -> dict[str, str]:
     items: List[Setting] = []
 
     async with async_session() as session:
@@ -34,16 +34,16 @@ async def get_all_configuration_variables(
         ).all():
             items.append(Setting.model_validate(item))
 
-    return items
+    return {v.key: v.value for v in items}
 
 
 @router.get("/config/{key}", tags=["configuration"])
 async def get_specific_variable(
     key: str,
     current_user: CurrentUser,
-) -> Setting:
+) -> str:
     async with async_session() as session:
-        return Setting.model_validate(
+        v = Setting.model_validate(
             (
                 await session.scalars(
                     select(models.Setting).where(
@@ -55,16 +55,17 @@ async def get_specific_variable(
                 )
             ).one()
         )
+        return v.value
 
 
-@router.post("/config", tags=["configuration"])
+@router.post("/config", tags=["configuration"], status_code=201)
 async def add_variable(
     setting: Setting,
     current_user: CurrentUser,
 ) -> Setting:
     async with async_session() as session:
         s = models.Setting(
-            name=setting.key, value=setting.value, user_id=current_user.id
+            key=setting.key, value=setting.value, user_id=current_user.id
         )
 
         session.add(s)
@@ -97,7 +98,7 @@ async def update_variable(
             return Setting.model_validate(cur)
         except NoResultFound as e:
             raise HTTPException(
-                status_code=422,
+                status_code=404,
                 detail={
                     "error": f"Can't modify {setting.key!r}; it doesn't exists in the database. (use POST to create)"
                 },

@@ -1,23 +1,50 @@
 <script lang="ts">
 	import type { Readable } from 'svelte/store';
-	import { DataHandler, Datatable, Th, ThFilter } from '@vincjo/datatables';
+	import { DataHandler, Th, ThFilter, type Row } from '@vincjo/datatables';
 	import { columnDef, type Column } from './types';
+	import { Paginator, type SvelteEvent } from '@skeletonlabs/skeleton';
+	import { createEventDispatcher } from 'svelte';
+
+	// Event Dispatcher
+	type TableEvent = {
+		selected: Row;
+	};
+	const dispatch = createEventDispatcher<TableEvent>();
 
 	let tableElement: HTMLElement | undefined;
 
-	export let data: Readable<Array<Object>>;
+	export let data: Readable<Array<Row>>;
 	export let columns: Array<Column> | undefined = undefined;
 	export let filterable: boolean = false;
 	export let rowsPerPage: number = 20;
+
+	export let search = true;
+	export let pagination = true;
+
+	let searchValue = '';
 
 	if (columns == undefined) {
 		columns = Object.keys($data[0]).map((key) => columnDef(key, key));
 	}
 
+	let page = {
+		page: 0,
+		limit: rowsPerPage,
+		size: $data.length,
+		amounts: [5, 10, 20, 50, 100]
+	};
+
 	const handler = new DataHandler($data, { rowsPerPage: rowsPerPage });
+
+	handler.on('change', () => {
+		if (tableElement) tableElement.scrollTop = 0;
+	});
+
+	handler.on('clearSearch', () => (searchValue = ''));
 
 	$: $data, update();
 	let rows = handler.getRows();
+	let rpp = handler.getRowsPerPage();
 
 	const update = () => {
 		if (tableElement && tableElement.parentElement) {
@@ -30,11 +57,57 @@
 			}, 2);
 		}
 	};
+
+	function onRowClick(
+		event: SvelteEvent<MouseEvent | KeyboardEvent, HTMLTableRowElement>,
+		rowIndex: number
+	): void {
+		// ignore events not hitting a td, buttons etc. should handle their own events
+		if (event.target instanceof Element && event.target.tagName != 'TD') {
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		const rowMetaData = $data[rowIndex];
+		/** @event {rowMetaData} selected - Fires when a table row is clicked. */
+		dispatch('selected', rowMetaData);
+	}
+
+	// Row Keydown Handler
+	function onRowKeydown(
+		event: SvelteEvent<KeyboardEvent, HTMLTableRowElement>,
+		rowIndex: number
+	): void {
+		if (['Enter', 'Space'].includes(event.code)) onRowClick(event, rowIndex);
+	}
+
+	function pageChange(e: CustomEvent<Number>) {
+		// skeleton paginator starts at 0, datatables at 1 so we have to add 1
+		// on every page change to get the correct one.
+		handler.setPage(e.detail.valueOf()+1);
+	}
+
+	function rowsPerPageChange(e: CustomEvent<Number>) {
+		rpp.set(e.detail.valueOf());
+	}
 </script>
 
-<div class="table-container">
-	<Datatable {handler}>
-		<table class="table table-hover" bind:this={tableElement}>
+<section class="space-y-2">
+	<header>
+		{#if search}
+			<input
+				class="input"
+				style="max-width: 30ch"
+				bind:value={searchValue}
+				placeholder={handler.i18n.search}
+				spellcheck="false"
+				on:input={() => handler.search(searchValue)}
+			/>
+		{/if}
+	</header>
+
+	<div class="overflow-x-scroll">
+		<table class="table table-compact table-hover" bind:this={tableElement}>
 			<thead>
 				{#if columns}
 					<tr>
@@ -48,9 +121,6 @@
 					</tr>
 					{#if filterable}
 						<tr>
-							<ThFilter {handler} filterBy="first_name" />
-							<ThFilter {handler} filterBy="last_name" />
-							<ThFilter {handler} filterBy="email" />
 							{#each columns as column}
 								{#if column.filterable}
 									<ThFilter {handler} filterBy={column.key} />
@@ -64,19 +134,48 @@
 			</thead>
 			<tbody>
 				{#if columns}
-					{#each $rows as row}
-						<tr>
-							{#each columns as column}
-								{#if column.component}
-									<td class="!pt-2 !pb-2"><svelte:component this={column.component} {row} /></td>
-								{:else}
-									<td class="!pt-2 !pb-2">{row[column.key]}</td>
-								{/if}
+					{#each $rows as row, rowIndex}
+						<tr
+							on:click={(e) => {
+								onRowClick(e, rowIndex);
+							}}
+							on:keydown={(e) => {
+								onRowKeydown(e, rowIndex);
+							}}
+							aria-rowindex={rowIndex + 1}
+						>
+							{#each columns as column, colIndex}
+								<td
+									class="!align-middle"
+									role="gridcell"
+									aria-colindex={colIndex + 1}
+									tabindex={colIndex === 0 ? 0 : -1}
+								>
+									{#if column.component}
+										<svelte:component this={column.component} {row} />
+									{:else if column.translate}
+										{column.translate(row[column.key])}
+									{:else}
+										{row[column.key]}
+									{/if}
+								</td>
 							{/each}
 						</tr>
 					{/each}
 				{/if}
 			</tbody>
 		</table>
-	</Datatable>
-</div>
+	</div>
+
+	<footer>
+		{#if pagination}
+			<Paginator
+				bind:settings={page}
+				showFirstLastButtons={false}
+				showPreviousNextButtons={true}
+				on:page={pageChange}
+				on:amount={rowsPerPageChange}
+			/>
+		{/if}
+	</footer>
+</section>

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {drawerStore} from '@skeletonlabs/skeleton';
+    import {getDrawerStore} from '@skeletonlabs/skeleton';
 
     function drawerClose(): void {
-        drawerStore.close();
+        getDrawerStore().close();
     }
 </script>
 

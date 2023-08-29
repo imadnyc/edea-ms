@@ -2,14 +2,15 @@
 
 Or how a user goes about their day while using EDeA-MS.
 
+NOTE: this is from the early stages and will be reworked.
+
 ## Projects
 
 At the beginning is always a new project.
 
 ### New Project
 
-1. Create new project in UI.
-    It doesn't make much sense to do this programatically as you likely don't create that many projects per day.
+1. Create new project in UI. There will also be specific API support in the future to have a role which is allowed to create new projects to integrate with internal tooling.
 2. Get the Project ID to input it into the new script.
 
 ### Existing project

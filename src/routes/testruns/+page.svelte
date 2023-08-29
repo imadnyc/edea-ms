@@ -1,40 +1,45 @@
 <script lang="ts">
 	import { TestRunState } from '$lib/models/models';
+	import SimpleTable from '$lib/tables/SimpleTable.svelte';
+	import { columnDef, type Column } from '$lib/tables/types';
+	import { readable } from 'svelte/store';
 	import type { PageData } from './$types';
+	import type { Row } from '@vincjo/datatables';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
+
+	let testruns = readable(data.testruns);
+
+	const columns: Column[] = [
+		columnDef('id', 'ID'),
+		columnDef('short_code', 'Short Code'),
+		columnDef('machine_hostname', 'Hostname'),
+		columnDef('user_name', 'User'),
+		columnDef('test_name', 'Test Name'),
+		columnDef('created_at', 'Created', { translate: (v) => new Date(v).toLocaleString('de-DE')}),
+		columnDef('started_at', 'Started', { translate: (v) => new Date(v).toLocaleString('de-DE')}),
+		columnDef('completed_at', 'Completed', { translate: (v) => new Date(v).toLocaleString('de-DE')}),
+		columnDef('state', 'State', { translate: (v) => TestRunState[v] })
+	];
+
+	function rowSelected(e: CustomEvent<Row>) {
+		goto(`/testrun/${e.detail.id}`);
+	}
 </script>
 
 <div class="container mx-auto p-8 space-y-8">
-	<h1>Testruns</h1>
+	<h1 class="h1">Testruns</h1>
 
-	<div class="table-container">
-	<table class="table table-hover">
-		<thead>
-			<th>Short Code</th>
-			<th>DUT ID</th>
-            <th>Hostname</th>
-            <th>User</th>
-            <th>Test Name</th>
-            <th class="table-sort-desc">Created</th>
-            <th>Started</th>
-            <th>Completed</th>
-            <th>State</th>
-		<tbody>
-			{#each data.testruns as run}
-				<tr>
-					<td><a href="/testrun/{run.short_code}">{run.short_code}</a></td>
-                    <td>{run.dut_id}</td>
-                    <td>{run.machine_hostname}</td>
-                    <td>{run.user_name}</td>
-                    <td>{run.test_name}</td>
-                    <td>{run.created_at}</td>
-                    <td>{run.started_at}</td>
-                    <td>{run.completed_at}</td>
-                    <td>{TestRunState[run.state]}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-</div>
+	{#if data.testruns.length > 0}
+		<SimpleTable
+			data={testruns}
+			{columns}
+			rowsPerPage={20}
+			on:selected={rowSelected}
+			search={false}
+		/>
+	{:else}
+		<p>No specification data available.</p>
+	{/if}
 </div>

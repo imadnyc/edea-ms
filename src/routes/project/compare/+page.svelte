@@ -7,9 +7,14 @@
 </script>
 
 <div class="container mx-auto p-8 space-y-8">
-	<div>
-		<h2>Compare testruns</h2>
-		<table>
+	<h2 class="h2">Compare testruns</h2>
+	<table class="table table-hover">
+		<thead>
+			{#each data.runs as run}
+				<th>ID: {run[0].id}, SC: {run[0].short_code}</th>
+			{/each}
+		</thead>
+		<tbody>
 			<tr>
 				{#each data.runs as run}
 					{#if run[0].data?.vega_lite}
@@ -23,6 +28,6 @@
 					{/if}
 				{/each}
 			</tr>
-		</table>
-	</div>
+		</tbody>
+	</table>
 </div>

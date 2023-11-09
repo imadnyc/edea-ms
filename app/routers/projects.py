@@ -3,6 +3,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
+from sqlalchemy.ext.mutable import MutableList
 
 from app.core.auth import CurrentUser
 from app.core.helpers import prj_unique_field, tryint
@@ -59,7 +60,7 @@ async def create_project(project: NewProject, current_user: CurrentUser) -> Proj
 
         # explicitely set to empty list of groups if it's not set
         if project.groups is None:
-            cur.groups = []
+            cur.groups = MutableList()
 
         session.add(cur)
         await session.commit()

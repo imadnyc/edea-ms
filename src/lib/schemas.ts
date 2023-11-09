@@ -16,3 +16,8 @@ export const SpecificationSchema = z.object({
     typical: z.number(),
     maximum: z.number()
 });
+
+export const DataQualitySchema = z.object({
+    testrun_id: z.number(),
+    quality: z.string().nullable(),
+})

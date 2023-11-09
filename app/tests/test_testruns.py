@@ -11,13 +11,13 @@ async def test_crud_testrun(client: AsyncClient) -> None:
         "groups": ["group_a", "group_b"],
     }
 
-    r = await client.post("/projects", headers=h, json=p1)
+    r = await client.post("/api/projects", headers=h, json=p1)
     assert r.status_code == 200
 
     p = r.json()
 
     r = await client.post(
-        "/testruns",
+        "/api/testruns",
         headers=h,
         json={
             "project_id": p["id"],
@@ -32,7 +32,7 @@ async def test_crud_testrun(client: AsyncClient) -> None:
     assert r.status_code == 201
     tr = r.json()
 
-    url = f"/testruns/{tr['id']}"
+    url = f"/api/testruns/{tr['id']}"
 
     # update the name of the test machine
     tr["machine_hostname"] = "other-machine"
@@ -46,6 +46,29 @@ async def test_crud_testrun(client: AsyncClient) -> None:
 
     assert tr["machine_hostname"] == "other-machine"
 
+    # set up the testrun
+    r = await client.post(
+        f"/api/testruns/setup/{tr['id']}", headers=h, json={"steps": [], "columns": {}}
+    )
+    assert r.status_code == 200
+
+    # start the testrun
+    r = await client.put(f"/api/testruns/start/{tr['id']}", headers=h)
+    assert r.status_code == 200
+
+    # mark it as failed
+    r = await client.put(f"/api/testruns/fail/{tr['id']}", headers=h)
+    assert r.status_code == 200
+
+    # set a field
+    r = await client.put(
+        f"/api/testruns/{tr['id']}/field/quality", headers=h, json="garbage"
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["data"]["quality"] == "garbage"
+
+    # before we delete it
     r = await client.delete(url, headers=h)
     assert r.status_code == 200
 

@@ -7,34 +7,47 @@ license = "EUPLv1.2"
 readme = "README.md"
 packages = [{ include = "app" }]
 
+# include the static assets in the distribution
+include = [{ path = "static/**/*", format = "wheel" }]
+
 [tool.poetry.dependencies]
-python = "^3.11"
-fastapi = "^0.103.0"
-sqlalchemy = { extras = ["asyncio"], version = "^2.0.20" }
+python = ">=3.11,<3.13"
+fastapi = "^0.104.1"
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.23" }
 uvicorn = { extras = ["standard"], version = "^0.23.2" }
 aiosqlite = "^0.19.0"
-httpx = "^0.24.1"
-alembic = "^1.11.3"
+httpx = "^0.25.1"
+alembic = "^1.12.1"
 aiofiles = "^23.2.1"
-cython = { version = "^3.0.2", optional = true }
-polars = "^0.18.15"
+cython = { version = "^3.0.5", optional = true }
+polars = "^0.19.12"
 python-multipart = "^0.0.6"
 pyjwt = "^2.8.0"
-cryptography = "^41.0.3"
+cryptography = "^41.0.5"
+authlib = "^1.2.1"
+itsdangerous = "^2.1.2"
+altair = { version = "^5.1.2", optional = true }
+vl-convert-python = { version = "^1.0.1", optional = true }
+pyarrow = "^14.0.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
+pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 trio = "^0.22.2"
-mypy = "^1.5.1"
+mypy = "^1.6.1"
 pytest-alembic = "^0.10.7"
-sqlalchemy = { version = "^2.0.20", extras = ["mypy"] }
-sourcery-cli = { version = "^1.8.0", optional = true }
-black = { version = "^23.7.0" }
+sqlalchemy = { version = "^2.0.23", extras = ["mypy"] }
+sourcery-cli = { version = "^1.13.0", optional = true }
+black = { version = "^23.11.0" }
 edea-tmc = { git = "https://gitlab.com/edea-dev/edea-tmc.git", branch = "main" }
 pytest-asyncio = "^0.21.1"
-numpy = "^1.25.2"
-pydantic = "^2.3.0"
+numpy = "^1.26.1"
+pydantic = "^2.4.2"
+gevent = "^23.9.1"
+pytest-playwright = "^0.4.3"
+pytest-docker = "^2.0.1"
+pytest-env = "^1.1.1"
+nest-asyncio = "^1.5.8"
 
 [tool.poetry.group.debug]
 optional = true
@@ -49,6 +62,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.pytest_env]
+OIDC_PROVIDERS = { value = "dex", skip_if_set = true }
+DEX_CLIENT_ID = { value = "edea-ms-test", skip_if_set = true }
+DEX_CLIENT_SECRET = { value = "edea-ms-test-secret", skip_if_set = true }
+DEX_SERVER_METADATA_URL = { value = "http://127.0.0.1:5556/dex/.well-known/openid-configuration", skip_if_set = true }
+DEX_SCOPE = { value = "openid profile groups", skip_if_set = true }
+API_BASE_URL = { value = "http://localhost:8000/api" }
 
 [tool.mypy]
 plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]

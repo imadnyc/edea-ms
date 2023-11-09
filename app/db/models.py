@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, ForeignKey, LargeBinary, UniqueConstraint, func
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -82,10 +83,10 @@ class User(Model):
     __tablename__: str = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    subject: Mapped[str]
+    subject: Mapped[str] = mapped_column(unique=True)
     displayname: Mapped[str]
-    groups: Mapped[list[str]] = mapped_column(JSON)
-    roles: Mapped[list[str]] = mapped_column(JSON)
+    groups: Mapped[MutableList[str]] = mapped_column(JSON)
+    roles: Mapped[MutableList[str]] = mapped_column(JSON)
     disabled: Mapped[bool]
 
 
@@ -95,7 +96,7 @@ class Project(Model, ProvidesUserMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     short_code: Mapped[str | None] = mapped_column(unique=True)
     name: Mapped[str]
-    groups: Mapped[list[str]] = mapped_column(JSON)
+    groups: Mapped[MutableList[str]] = mapped_column(JSON)
 
 
 class Specification(Model, ProvidesProjectMixin):

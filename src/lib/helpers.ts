@@ -29,12 +29,22 @@ export async function submitForm(
     form: SuperValidated<AnyZodObject>,
     request_body?: Object
 ): Promise<any> {
-    let url = '/api/' + endpoint;
     let method = 'POST';
     if (form.data.id) {
-        url += '/' + form.data.id;
+        endpoint += '/' + form.data.id;
         method = 'PUT';
     }
+
+    return await submitFormObject(method, endpoint, form, request_body);
+}
+
+export async function submitFormObject(
+    method: string,
+    endpoint: string,
+    form: SuperValidated<AnyZodObject>,
+    request_body?: any
+): Promise<any> {
+    let url = '/api/' + endpoint;
     const resp = await fetch(url, {
         headers: { 'Content-Type': 'application/json' },
         method: method,
@@ -42,6 +52,8 @@ export async function submitForm(
     });
 
     const d = await resp.json();
+
+    console.log(resp);
 
     // handle custom errors and set the form validation error field for it
     // for now this is only for unique constraints

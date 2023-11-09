@@ -110,10 +110,10 @@ class VirtualDCDC(Stepper):
 @pytest.mark.asyncio
 class TestMeasurementFlow:
     async def test_create_project(self, client: AsyncClient) -> None:
-        r = await client.get("/projects/X5678")
+        r = await client.get("/api/projects/X5678")
         if r.status_code == 404:
             r = await client.post(
-                "/projects",
+                "/api/projects",
                 json={
                     "short_code": "X5678",
                     "name": "test_project",
@@ -155,16 +155,16 @@ class TestMeasurementFlow:
         )
 
     async def test_get_run_results(self, client: AsyncClient) -> None:
-        r = await client.get("/testruns/measurements/1")
+        r = await client.get("/api/testruns/measurements/1")
         assert r.status_code == 200
         assert len(r.json()) == 75
 
     async def test_get_project_runs(self, client: AsyncClient) -> None:
-        r = await client.get("/testruns/project/X5678")
+        r = await client.get("/api/testruns/project/X5678")
         assert r.status_code == 200
 
     async def test_testruns_overview(self, client: AsyncClient) -> None:
-        r = await client.get("/testruns/overview")
+        r = await client.get("/api/testruns/overview")
         assert r.status_code == 200
 
         tr = r.json()

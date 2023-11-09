@@ -11,13 +11,13 @@ async def test_crud_specification(client: AsyncClient) -> None:
         "groups": ["group_a", "group_b"],
     }
 
-    r = await client.post("/projects", headers=h, json=p1)
+    r = await client.post("/api/projects", headers=h, json=p1)
     assert r.status_code == 200
 
     p = r.json()
 
     r = await client.post(
-        "/specifications",
+        "/api/specifications",
         headers=h,
         json={
             "project_id": p["id"],
@@ -32,14 +32,14 @@ async def test_crud_specification(client: AsyncClient) -> None:
     assert r.status_code == 201
     sp = r.json()
 
-    url = f"/specifications/{sp['id']}"
+    url = f"/api/specifications/{sp['id']}"
 
     # update the name of the test machine
     sp["name"] = "spec_renamed"
     r = await client.put(url, headers=h, json=sp)
     assert r.status_code == 200
 
-    r = await client.get(f"/specifications/project/{p['id']}", headers=h)
+    r = await client.get(f"/api/specifications/project/{p['id']}", headers=h)
     assert r.status_code == 200
 
     sp = r.json()
@@ -50,5 +50,5 @@ async def test_crud_specification(client: AsyncClient) -> None:
     assert r.status_code == 200
 
     # verify it's gone now
-    r = await client.get(f"/specifications/project/{p['id']}", headers=h)
+    r = await client.get(f"/api/specifications/project/{p['id']}", headers=h)
     assert len(r.json()) == 0

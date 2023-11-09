@@ -249,3 +249,7 @@ vite.config.ts.timestamp-*
 test.db
 *.sqlite
 .idea
+
+# compiled frontend assets
+static/index.html
+static/_app

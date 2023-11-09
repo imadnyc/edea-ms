@@ -1,15 +1,15 @@
 <script lang="ts">
-	import type { PageData } from './$types';
-	import { specifications, selected_ids } from './store';
+	import { goto } from '$app/navigation';
 	import SimpleTable from '$lib/tables/SimpleTable.svelte';
-	import { columnDef, type Column, componentColumnDef } from '$lib/tables/types';
-	import { readable } from 'svelte/store';
+	import { columnDef, componentColumnDef, type Column } from '$lib/tables/types';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import type { Row } from '@vincjo/datatables';
+	import { readable } from 'svelte/store';
+	import type { PageData } from './$types';
 	import Actions from './actions.svelte';
 	import DetailLink from './detail_link.svelte';
 	import CheckBox from './select_box.svelte';
-	import { goto } from '$app/navigation';
-	import type { Row } from '@vincjo/datatables';
+	import { selected_ids, specifications } from './store';
 
 	export let data: PageData;
 	const modalStore = getModalStore();

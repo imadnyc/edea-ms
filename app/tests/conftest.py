@@ -1,11 +1,12 @@
 import asyncio
+import os
 from typing import Any, AsyncIterable
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from ..db import override_db, DATABASE_URL
+from ..db import DATABASE_URL, override_db
 from ..db.models import Model
 from ..main import app
 
@@ -42,5 +43,18 @@ async def setup_db() -> AsyncIterable[None]:
 
 @pytest.fixture(scope="module")
 async def client() -> AsyncIterable[AsyncClient]:
-    async with AsyncClient(app=app, base_url="http://test", headers={"X-Webauth-User": "test-user"}) as client:
+    async with AsyncClient(
+        app=app, base_url="http://test", headers={"X-Webauth-User": "test-user"}
+    ) as client:
         yield client
+
+
+@pytest.fixture(scope="module")
+async def no_auth_client() -> AsyncIterable[AsyncClient]:
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture(scope="session")
+def docker_compose_file(pytestconfig: Any) -> str:
+    return os.path.join(str(pytestconfig.rootdir), "app", "tests", "docker-compose.yml")

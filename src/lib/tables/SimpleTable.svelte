@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Readable } from 'svelte/store';
-	import { DataHandler, Th, ThFilter, type Row } from '@vincjo/datatables';
-	import { columnDef, type Column } from './types';
 	import { Paginator, type SvelteEvent } from '@skeletonlabs/skeleton';
+	import { DataHandler, Th, ThFilter, type Row } from '@vincjo/datatables';
 	import { createEventDispatcher } from 'svelte';
+	import type { Readable } from 'svelte/store';
+	import { columnDef, type Column } from './types';
 
 	// Event Dispatcher
 	type TableEvent = {
@@ -84,7 +84,7 @@
 	function pageChange(e: CustomEvent<Number>) {
 		// skeleton paginator starts at 0, datatables at 1 so we have to add 1
 		// on every page change to get the correct one.
-		handler.setPage(e.detail.valueOf()+1);
+		handler.setPage(e.detail.valueOf() + 1);
 	}
 
 	function rowsPerPageChange(e: CustomEvent<Number>) {
@@ -167,8 +167,8 @@
 		</table>
 	</div>
 
-	<footer>
-		{#if pagination}
+	{#if pagination}
+		<footer>
 			<Paginator
 				bind:settings={page}
 				showFirstLastButtons={false}
@@ -176,6 +176,6 @@
 				on:page={pageChange}
 				on:amount={rowsPerPageChange}
 			/>
-		{/if}
-	</footer>
+		</footer>
+	{/if}
 </section>

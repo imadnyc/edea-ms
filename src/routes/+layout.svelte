@@ -1,19 +1,27 @@
 <script lang="ts">
 	import '../app.postcss';
+
+	import ProjectForm from '$lib/modals/ProjectForm.svelte';
+	import SpecificationForm from '$lib/modals/SpecificationForm.svelte';
+	import DataQualityForm from '$lib/modals/DataQualityForm.svelte';
+	import Navigation from '$lib/navigation/Navigation.svelte';
 	import {
 		AppBar,
 		AppShell,
 		Drawer,
-		getDrawerStore,
+		LightSwitch,
 		Modal,
 		Toast,
+		getDrawerStore,
+		initializeStores,
 		type ModalComponent,
-		initializeStores
+		autoModeWatcher
 	} from '@skeletonlabs/skeleton';
-	import Navigation from '$lib/navigation/Navigation.svelte';
-	import { LightSwitch } from '@skeletonlabs/skeleton';
-	import SpecificationForm from '$lib/modals/SpecificationForm.svelte';
-	import ProjectForm from '$lib/modals/ProjectForm.svelte';
+	import { setContext } from 'svelte';
+	import { writable } from 'svelte/store';
+	import type { LayoutData } from './$types';
+
+	export let data: LayoutData;
 
 	initializeStores();
 
@@ -28,9 +36,17 @@
 		},
 		modalProjectForm: {
 			ref: ProjectForm
+		},
+		modalChangeDataQuality: {
+			ref: DataQualityForm
 		}
 	};
+
+	// store user information in a context
+	setContext('user', writable(data.user));
 </script>
+
+<svelte:head>{@html `<script>${autoModeWatcher.toString()} autoModeWatcher();</script>`}</svelte:head>
 
 <Drawer>
 	<Navigation />
@@ -59,13 +75,7 @@
 				</div>
 			</svelte:fragment>
 			<svelte:fragment slot="trail">
-				<a
-					class="btn btn-sm variant-filled"
-					href="https://blog.edea.dev"
-					target="_blank"
-				>
-					Blog
-				</a>
+				<a class="btn btn-sm variant-filled" href="https://blog.edea.dev" target="_blank"> Blog </a>
 				<a
 					class="btn btn-sm variant-filled"
 					href="https://edea-dev.gitlab.io/edea-ms/"
@@ -73,11 +83,7 @@
 				>
 					Docs
 				</a>
-				<a
-					class="btn btn-sm variant-filled"
-					href="https://tmc.edea.dev"
-					target="_blank"
-				>
+				<a class="btn btn-sm variant-filled" href="https://tmc.edea.dev" target="_blank">
 					TMC Docs
 				</a>
 				<a
@@ -87,6 +93,11 @@
 				>
 					GitLab
 				</a>
+				{#if data.user == undefined}
+					<a class="btn btn-sm variant-filled" href="/api/login/dex">Login</a>
+				{:else if data.user.subject != "single_user"}
+					<a class="btn btn-sm variant-filled" href="/api/logout">Logout</a>
+				{/if}
 				<LightSwitch />
 			</svelte:fragment>
 		</AppBar>

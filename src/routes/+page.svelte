@@ -1,11 +1,12 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import { goto } from '$app/navigation';
+	import { TestRunState, type User } from '$lib/models/models';
 	import SimpleTable from '$lib/tables/SimpleTable.svelte';
 	import { columnDef, type Column } from '$lib/tables/types';
-	import { readable } from 'svelte/store';
-	import { goto } from '$app/navigation';
 	import type { Row } from '@vincjo/datatables';
-	import { TestRunState } from '$lib/models/models';
+	import { getContext } from 'svelte';
+	import { readable, type Writable } from 'svelte/store';
+	import type { PageData } from './$types';
 
 	export let data: PageData;
 
@@ -28,7 +29,14 @@
 	function rowSelected(e: CustomEvent<Row>) {
 		goto(`/testrun/${e.detail.id}`);
 	}
+
+	const user = getContext<Writable<User | undefined>>('user');
 </script>
+
+<svelte:head>
+    <title>EDeA-MS</title> 
+</svelte:head>
+
 
 <div class="container mx-auto p-8 space-y-8">
 	<section class="space-y-2">
@@ -41,17 +49,21 @@
 		</p>
 	</section>
 	<section class="space-y-2">
-		<h2 class="h2">Recent Testruns</h2>
-		{#if data.testruns.length > 0}
-			<SimpleTable
-				data={testruns}
-				{columns}
-				rowsPerPage={20}
-				on:selected={rowSelected}
-				search={false}
-			/>
+		{#if $user !== undefined}
+			<h2 class="h2">Recent Testruns</h2>
+			{#if data.testruns.length > 0}
+				<SimpleTable
+					data={testruns}
+					{columns}
+					rowsPerPage={20}
+					on:selected={rowSelected}
+					search={false}
+				/>
+			{:else}
+				<p>No recent testruns.</p>
+			{/if}
 		{:else}
-			<p>No recent testruns.</p>
+			<p>Please log in to see recent testruns.</p>
 		{/if}
 	</section>
 </div>

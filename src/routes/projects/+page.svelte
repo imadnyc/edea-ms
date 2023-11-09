@@ -1,18 +1,22 @@
 <script lang="ts">
-	import type { PageData } from './$types';
-	import { columnDef, type Column, componentColumnDef } from '$lib/tables/types';
-	import SimpleTable from '$lib/tables/SimpleTable.svelte';
-	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
-	import Actions from './actions.svelte';
-	import { projects, user } from './store';
-	import type { Row } from '@vincjo/datatables';
 	import { goto } from '$app/navigation';
+	import type { User } from '$lib/models/models';
+	import SimpleTable from '$lib/tables/SimpleTable.svelte';
+	import { columnDef, componentColumnDef, type Column } from '$lib/tables/types';
+	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import type { Row } from '@vincjo/datatables';
+	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { PageData } from './$types';
+	import Actions from './actions.svelte';
+	import { projects } from './store';
 
 	export let data: PageData;
 	const modalStore = getModalStore();
 
 	projects.set(data.projects);
-	user.set(data.user);
+
+	const user = getContext<Writable<User | undefined>>('user');
 
 	const columns: Column[] = [
 		columnDef('id', 'ID'),
@@ -26,7 +30,7 @@
 		type: 'component',
 		title: 'New Project',
 		body: '',
-		meta: { groups: data.user.groups },
+		meta: { groups: $user?.groups },
 		// Pass the component registry key as a string:
 		component: 'modalProjectForm',
 		response: async (r: any) => {
@@ -51,12 +55,14 @@
 <div class="container mx-auto p-8 space-y-8">
 	<section class="flex justify-between">
 		<h1 class="h1">Projects</h1>
-		<button class="btn bg-gradient-to-br variant-filled" on:click={newProject}>New</button>
+		{#if $user !== undefined}
+			<button class="btn bg-gradient-to-br variant-filled" on:click={newProject}>New</button>
+		{/if}
 	</section>
 
 	{#if $projects.length > 0}
 		<SimpleTable data={projects} {columns} rowsPerPage={10} on:selected={rowSelected} />
 	{:else}
-		<p>No specification data available.</p>
+		<p>No project data available.</p>
 	{/if}
 </div>

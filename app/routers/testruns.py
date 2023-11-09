@@ -1,10 +1,12 @@
+import contextlib
 import io
+from collections.abc import Iterator
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Annotated, Any, List
 
 import polars as pl
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, or_, select
@@ -18,6 +20,11 @@ from app.db import async_session, models
 from app.db.models import TestRunState
 from app.db.queries import common_project_ids
 
+with contextlib.suppress(ImportError):
+    import altair as alt  # type: ignore
+    import vl_convert as vlc  # type: ignore
+
+
 router = APIRouter()
 
 
@@ -30,7 +37,7 @@ class NewTestRun(BaseModel):
     machine_hostname: str
     user_name: str
     test_name: str
-    data: dict[Any, Any] | None = None
+    data: dict[str, Any] | None = None
 
 
 class TestRun(NewTestRun):
@@ -64,6 +71,33 @@ class DataExportFormat(Enum):
     CSV = "csv"
     JSON = "json"
     PARQUET = "parquet"
+
+
+class ChartExportFormat(Enum):
+    PNG = "png"
+    SVG = "svg"
+    HTML = "html"
+
+
+class WrappedIO:
+    """WrappedIO is a minimal wrapper to allow string or bytes writes to the same
+    underlying buffer.
+    """
+
+    def __init__(self) -> None:
+        self.buf = io.BytesIO()
+
+    def write(self, b: bytes | str) -> int:
+        return self.buf.write(b.encode()) if isinstance(b, str) else self.write(b)
+
+    def seek(self, offset: int) -> int:
+        return self.buf.seek(offset)
+
+    def __iter__(self) -> Iterator[bytes]:
+        return self.buf.__iter__()
+
+    def __next__(self) -> bytes:
+        return self.buf.__next__()
 
 
 @router.get("/testruns", tags=["testrun"])
@@ -223,6 +257,67 @@ async def update_testrun(
         return TestRun.model_validate(cur)
 
 
+@router.put("/testruns/{ident}/field/{field_name}", tags=["testrun"])
+async def update_testrun_field(
+    ident: Annotated[int | str, Depends(tryint)],
+    field_name: str,
+    field_value: Annotated[str | int | list[Any] | dict[Any, Any] | None, Body()],
+    current_user: CurrentUser,
+) -> TestRun:
+    async with async_session() as session:
+        cur = (
+            await session.scalars(
+                select(models.TestRun).where(
+                    and_(
+                        tr_unique_field(ident) == ident,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
+            )
+        ).one()
+
+        if cur.data is None:
+            cur.data = {field_name: field_value}
+        else:
+            cur.data = (
+                cur.data.copy()
+            )  # sqlalchemy can't detect value changes within a dict
+            cur.data[field_name] = field_value
+
+        await session.commit()
+        return TestRun.model_validate(cur)
+
+
+@router.delete("/testruns/{ident}/field/{field_name}", tags=["testrun"])
+async def delete_testrun_field(
+    ident: Annotated[int | str, Depends(tryint)],
+    field_name: str,
+    current_user: CurrentUser,
+) -> Response:
+    async with async_session() as session:
+        cur = (
+            await session.scalars(
+                select(models.TestRun).where(
+                    and_(
+                        tr_unique_field(ident) == ident,
+                        models.TestRun.user_id == current_user.id,
+                    )
+                )
+            )
+        ).one()
+
+        if cur.data is None:
+            return Response(status_code=410)
+
+        cur.data = (
+            cur.data.copy()
+        )  # sqlalchemy can't detect value changes within a dict
+        cur.data[field_name] = None
+
+        await session.commit()
+        return Response(status_code=200)
+
+
 @router.delete("/testruns/{ident}", tags=["testrun"])
 async def delete_testrun(
     ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
@@ -244,36 +339,8 @@ async def delete_testrun(
     return {"deleted_rows": 1}
 
 
-@router.get("/testruns/measurements/{ident}", tags=["testrun"])
-async def testrun_measurements(
-    ident: Annotated[int | str, Depends(tryint)],
-    current_user: CurrentUser,
-    data_format: DataExportFormat
-    | None = Query(default=DataExportFormat.JSON, alias="format"),
-) -> StreamingResponse:
-    """
-    This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
-    merges them together with the results. As a last step, all columns only consisting of null values get removed.
-    """
-
+async def _get_testrun_df(run: models.TestRun) -> pl.DataFrame:
     async with async_session() as session:
-        # check if the run exists before we do other more expensive tasks
-        run = (
-            await session.scalars(
-                select(models.TestRun).where(
-                    and_(
-                        tr_unique_field(ident) == ident,
-                        or_(
-                            models.TestRun.user_id == current_user.id,
-                            models.TestRun.project_id.in_(
-                                common_project_ids(current_user)
-                            ),
-                        ),
-                    )
-                )
-            )
-        ).one()
-
         # aliases allow for more compact queries
         me = aliased(models.MeasurementEntry)
         mc = aliased(models.MeasurementColumn)
@@ -339,30 +406,135 @@ async def testrun_measurements(
 
         df = df.rename(mapping)
 
-        f = io.BytesIO()
+        return df
 
-        # polars can directly export a variety of formats which works nicely here
-        if data_format == DataExportFormat.JSON:
-            df.write_json(f, row_oriented=True)
-            media_type = "application/json"
-        elif data_format == DataExportFormat.PARQUET:
-            df.write_parquet(f)
-            media_type = "application/octet-stream"
-        elif data_format == DataExportFormat.CSV:
-            df.write_csv(f)
-            media_type = "text/csv"
-        else:
-            raise HTTPException(423, "unknown export format")
 
-        f.seek(0)
+async def _get_user_testrun(
+    ident: str | int, current_user: CurrentUser
+) -> models.TestRun:
+    async with async_session() as session:
+        run = (
+            await session.scalars(
+                select(models.TestRun).where(
+                    and_(
+                        tr_unique_field(ident) == ident,
+                        or_(
+                            models.TestRun.user_id == current_user.id,
+                            models.TestRun.project_id.in_(
+                                common_project_ids(current_user)
+                            ),
+                        ),
+                    )
+                )
+            )
+        ).one()
 
-        headers = {}
-        if data_format != DataExportFormat.JSON:
-            headers[
-                "Content-Disposition"
-            ] = f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+    return run
 
-        return StreamingResponse(f, headers=headers, media_type=media_type)
+
+@router.get("/testruns/measurements/{ident}", tags=["testrun"])
+async def testrun_measurements(
+    ident: Annotated[int | str, Depends(tryint)],
+    current_user: CurrentUser,
+    data_format: DataExportFormat
+    | None = Query(default=DataExportFormat.JSON, alias="format"),
+) -> StreamingResponse:
+    """
+    This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
+    merges them together with the results. As a last step, all columns only consisting of null values get removed.
+    """
+
+    # check if the run exists before we do other more expensive tasks
+    run = await _get_user_testrun(ident, current_user)
+
+    df = await _get_testrun_df(run)
+
+    f = io.BytesIO()
+
+    # polars can directly export a variety of formats which works nicely here
+    if data_format == DataExportFormat.JSON:
+        df.write_json(f, row_oriented=True)
+        media_type = "application/json"
+    elif data_format == DataExportFormat.PARQUET:
+        df.write_parquet(f)
+        media_type = "application/octet-stream"
+    elif data_format == DataExportFormat.CSV:
+        df.write_csv(f)
+        media_type = "text/csv"
+    else:
+        raise HTTPException(423, "unknown export format")
+
+    f.seek(0)
+
+    headers = {}
+    if data_format != DataExportFormat.JSON:
+        headers[
+            "Content-Disposition"
+        ] = f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+
+    return StreamingResponse(f, headers=headers, media_type=media_type)
+
+
+@router.get("/testruns/plot/{ident}", tags=["testrun"])
+async def testrun_plot_charts(
+    ident: Annotated[int | str, Depends(tryint)],
+    current_user: CurrentUser,
+    data_format: ChartExportFormat
+    | None = Query(default=ChartExportFormat.SVG, alias="format"),
+    dpi: int = Query(default=150),
+) -> StreamingResponse:
+    """
+    This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
+    merges them together with the results. As a last step, all columns only consisting of null values get removed.
+    """
+
+    if not alt:
+        raise HTTPException(
+            status_code=400, detail="Plotting dependency 'altair' is not available"
+        )
+    if not vlc and data_format in [ChartExportFormat.PNG, ChartExportFormat.SVG]:
+        raise HTTPException(
+            status_code=400,
+            detail="Plotting to PNG or SVG requires the vl-convert-python library",
+        )
+
+    # check if the run exists before we do other more expensive tasks
+    run = await _get_user_testrun(ident, current_user)
+
+    if run.data and "vega_lite" in run.data:
+        chart_spec = alt.Chart.from_dict(run.data["vega_lite"])
+    else:
+        raise HTTPException(
+            status_code=400, detail="testrun has no 'vega_lite' chart specification"
+        )
+
+    df = await _get_testrun_df(run)
+    chart_spec.data = df
+
+    f = WrappedIO()
+
+    # polars can directly export a variety of formats which works nicely here
+    if data_format == ChartExportFormat.HTML:
+        chart_spec.save(fp=f, format="html")
+        media_type = "text/html"
+    elif data_format == ChartExportFormat.SVG:
+        chart_spec.save(fp=f, format="svg")
+        media_type = "image/svg"
+    elif data_format == ChartExportFormat.PNG:
+        chart_spec.save(fp=f, format="png", ppi=dpi)
+        media_type = "image/png"
+    else:
+        raise HTTPException(423, "unknown export format")
+
+    f.seek(0)
+
+    headers = {}
+    if data_format != DataExportFormat.JSON:
+        headers[
+            "Content-Disposition"
+        ] = f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+
+    return StreamingResponse(f, headers=headers, media_type=media_type)
 
 
 @router.post("/testruns/setup/{ident}", tags=["testrun"])
@@ -443,6 +615,8 @@ async def setup_testrun(
                 target_value = step[name]
                 if isinstance(target_value, float):
                     fc.numeric_value = target_value
+                elif isinstance(target_value, int):
+                    fc.numeric_value = float(target_value)
                 else:
                     fc.string_value = target_value
 

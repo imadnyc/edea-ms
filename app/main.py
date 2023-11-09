@@ -1,15 +1,20 @@
+import os
+import secrets
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import AsyncGenerator
 
 import sqlalchemy.exc
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse, Response
+from fastapi import APIRouter, FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import create_async_engine
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.auth import AuthenticationMiddleware
+from app.core.staticfiles import get_asset
 
 from .db.models import Model
 from .routers import (
+    auth_oidc,
     config,
     export,
     files,
@@ -73,6 +78,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # cleanup here
 
 
+api_prefix = "/api"
+
 app = FastAPI(
     title="EDeA Measurement Server",
     description=description,
@@ -86,18 +93,25 @@ app = FastAPI(
 )
 
 app.add_middleware(AuthenticationMiddleware)
+app.add_middleware(
+    SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", secrets.token_hex(16))
+)
 
-app.include_router(testruns.router)
-app.include_router(projects.router)
-app.include_router(specifications.router)
-app.include_router(measurement_columns.router)
-app.include_router(measurement_entries.router)
-app.include_router(forcing_condition.router)
-app.include_router(export.router)
-app.include_router(jobs.router)
-app.include_router(config.router)
-app.include_router(files.router)
-app.include_router(users.router)
+api = APIRouter(prefix=api_prefix)
+api.include_router(testruns.router)
+api.include_router(projects.router)
+api.include_router(specifications.router)
+api.include_router(measurement_columns.router)
+api.include_router(measurement_entries.router)
+api.include_router(forcing_condition.router)
+api.include_router(export.router)
+api.include_router(jobs.router)
+api.include_router(config.router)
+api.include_router(files.router)
+api.include_router(users.router)
+api.include_router(auth_oidc.router)
+
+app.include_router(api)
 
 
 @app.exception_handler(sqlalchemy.exc.NoResultFound)
@@ -136,11 +150,21 @@ async def sqlalchemy_integrity_error(
     )
 
 
-@app.get("/static/node_modules")
-async def forbid() -> Any:
-    return Response(status_code=404)
+@app.get("/{path_name:path}")
+async def catch_all(request: Request, path_name: str) -> Response:
+    # as this is a catch all, we get anything that isn't matched before, anything we get
+    # that starts with /api most likely indicates a bug (or typo).
+    if path_name.startswith("api/"):
+        raise HTTPException(
+            status_code=404, detail=f"route {path_name} not available under /api/*"
+        )
 
+    # in SPA mode, paths covered by the frontend should also just return the page
+    # because the frontend will then sort out what the client requested.
+    frontend_paths = ("project", "testrun")
 
-@app.get("/")
-async def root() -> Any:
-    return RedirectResponse("/static/index.html")
+    return (
+        get_asset("index.html")
+        if not path_name or path_name.startswith(frontend_paths)
+        else get_asset(path_name)
+    )

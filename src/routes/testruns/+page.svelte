@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { TestRunState } from '$lib/models/models';
 	import SimpleTable from '$lib/tables/SimpleTable.svelte';
 	import { columnDef, type Column } from '$lib/tables/types';
+	import type { Row } from '@vincjo/datatables';
 	import { readable } from 'svelte/store';
 	import type { PageData } from './$types';
-	import type { Row } from '@vincjo/datatables';
-	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 
@@ -40,6 +40,6 @@
 			search={false}
 		/>
 	{:else}
-		<p>No specification data available.</p>
+		<p>No testrun data available.</p>
 	{/if}
 </div>

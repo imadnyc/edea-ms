@@ -6,6 +6,9 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from jwt import InvalidTokenError, MissingRequiredClaimError, PyJWKClient
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound
+from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -33,7 +36,87 @@ claims_exception = HTTPException(
 )
 
 
+class SingleUser:
+    def __init__(
+        self,
+        username: str = "single_user",
+        groups: list[str] | None = None,
+        roles: list[str] | None = None,
+    ):
+        if groups is None:
+            groups = ["defailt"]
+        if roles is None:
+            roles = ["admin"]
+        self.is_enabled = False
+        self.username = username
+        self.groups = groups
+        self.roles = roles
+
+    def enable(
+        self,
+        username: str | None = None,
+        groups: list[str] | None = None,
+        roles: list[str] | None = None,
+    ) -> None:
+        self.is_enabled = True
+        if username:
+            self.username = username
+        if groups:
+            self.groups = groups
+        if roles:
+            self.roles = roles
+
+    @property
+    def enabled(self) -> bool:
+        return self.is_enabled
+
+
+single_user = SingleUser()
+
+
+async def manage_user_data(
+    session: AsyncSession,
+    username: str,
+    displayname: str,
+    groups: list[str],
+    roles: list[str],
+) -> User:
+    u: User | None = None
+
+    try:
+        u = (
+            await session.scalars(select(User).where(User.subject == username))
+        ).one_or_none()
+    except MultipleResultsFound as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "msg": "multiple users with the same subject found when one or none were expected",
+                "exc": e,
+            },
+        ) from e
+
+    if u is None:
+        u = User(
+            subject=username,
+            displayname=displayname,
+            groups=groups,
+            roles=roles,
+            disabled=False,
+        )
+        session.add(u)
+        await session.commit()
+    elif u.groups != groups or u.roles != roles:
+        u.groups = MutableList(groups)
+        u.roles = MutableList(roles)
+        session.add(u)
+        await session.commit()
+
+    return u
+
+
 async def get_current_user(
+    request: Request,
     token: str | None = None,
     authorization: str | None = None,
     x_webauth_user: str | None = None,
@@ -49,53 +132,45 @@ async def get_current_user(
 
     groups: list[str] = []
     roles: list[str] = []
+    displayname: str = ""
+    username: str | None = None
 
-    # get the user information either from headers or a token
-    if x_webauth_user:
-        username = x_webauth_user
-        groups = x_webauth_groups or []
-        roles = x_webauth_roles or []
-
-        # handle multiple field values in a single header according to RFC9110, section 5.3.
-        if len(groups) == 1 and "," in groups[0]:
-            groups = groups[0].split(",")
-        if len(roles) == 1 and "," in roles[0]:
-            roles = roles[0].split(",")
+    if single_user.enabled:
+        username = single_user.username
+        groups = single_user.groups
+        roles = single_user.roles
     else:
-        if token is None and authorization is None:
-            return None
+        # get the user information either from headers or a token
+        if request.session:
+            if u := request.session.get("user"):
+                if isinstance(u, dict):
+                    username = u["sub"]
+                    displayname = u.get("preferred_username", u.get("name"))
+                    groups = u.get("groups_direct", u.get("groups", []))
+                    roles = u.get("roles", [])
 
-        # use token or authentication header, strip off "Bearer " part for header
-        p_tok = token or authorization.split(" ")[-1] if authorization else ""
+        # TODO: check if headers should be trusted or not
+        if not username:
+            if x_webauth_user:
+                username = x_webauth_user
+                groups = x_webauth_groups or []
+                roles = x_webauth_roles or []
 
-        groups, roles, username = _parse_jwt(p_tok)
+                # handle multiple field values in a single header according to RFC9110, section 5.3.
+                if len(groups) == 1 and "," in groups[0]:
+                    groups = groups[0].split(",")
+                if len(roles) == 1 and "," in roles[0]:
+                    roles = roles[0].split(",")
+            elif token is None and authorization is None:
+                return None
+            else:
+                # use token or authentication header, strip off "Bearer " part for header
+                p_tok = token or authorization.split(" ")[-1] if authorization else ""
 
-    # get the user info or create a new one if it's the first time they access the server
+                groups, roles, username = _parse_jwt(p_tok)
+
     async with async_session() as session:
-        u = (
-            await session.scalars(select(User).where(User.subject == username))
-        ).one_or_none()
-
-        # create a new user if we don't have one with the subject name
-        if u is None:
-            u = User(
-                subject=username,
-                displayname="",
-                groups=groups,
-                roles=roles,
-                disabled=False,
-            )
-            session.add(u)
-            await session.commit()
-        elif (
-            u.groups != groups or u.roles != roles
-        ):  # or update if groups or roles changed
-            u.groups = groups
-            u.roles = roles
-            session.add(u)
-            await session.commit()
-
-        return u
+        return await manage_user_data(session, username, displayname, groups, roles)
 
 
 def _parse_jwt(token: str) -> tuple[list[str], list[str], str]:
@@ -147,7 +222,12 @@ class AuthenticationMiddleware:
         token = request.cookies.get("token")
 
         u = await get_current_user(
-            token, authorization, x_webauth_user, x_webauth_groups, x_webauth_roles
+            request,
+            token,
+            authorization,
+            x_webauth_user,
+            x_webauth_groups,
+            x_webauth_roles,
         )
         ctx_token = _request_user_ctx_var.set(u)
 

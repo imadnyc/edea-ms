@@ -4,8 +4,8 @@
 
 	import { Icon, Pencil, Trash } from 'svelte-hero-icons';
 
-	import { getToastStore, getModalStore } from '@skeletonlabs/skeleton';
-	import type { ToastSettings, ModalSettings } from '@skeletonlabs/skeleton';
+	import type { ModalSettings, ToastSettings } from '@skeletonlabs/skeleton';
+	import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
 	import { specifications } from './store';
 
 	const modalStore = getModalStore();

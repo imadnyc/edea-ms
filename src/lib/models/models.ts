@@ -12,6 +12,8 @@ export enum TestRunState {
 
 export type TestRunData = {
     vega_lite?: VisualizationSpec
+    vega_lite_temp?: string
+    quality?: string
 }
 
 export type TestRun = {

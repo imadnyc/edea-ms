@@ -2,6 +2,12 @@ import { getTestRunData } from '$lib/helpers';
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Project, TestRun } from '$lib/models/models';
+import type { Row } from '@vincjo/datatables';
+
+type TRDTuple = {
+    run: TestRun,
+    measurements: Row[],
+};
 
 export const load = (async ({ fetch, url }) => {
     let project_id = url.searchParams.get("id");
@@ -15,12 +21,14 @@ export const load = (async ({ fetch, url }) => {
             return response.json() as Promise<Project>
         });
 
-    let runs: [TestRun, Object[]][] = [];
+    let runs: Array<TRDTuple> = [];
 
-    run_ids?.forEach(async id => {
-        const { run, measurements } = await getTestRunData(fetch, id);
-        runs.push([run, measurements]);
-    });
+    if (run_ids) {
+        for (var id of run_ids) {
+            const { run, measurements } = await getTestRunData(fetch, id);
+            runs.push({ run, measurements });
+        }
+    }
 
     return {
         project: project,

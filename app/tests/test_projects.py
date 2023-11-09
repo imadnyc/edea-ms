@@ -25,13 +25,13 @@ async def test_create_projects_with_groups(client: AsyncClient) -> None:
         "groups": ["group_x", "group_y"],
     }
 
-    r = await client.post("/projects", json=p1)
+    r = await client.post("/api/projects", json=p1)
     assert r.status_code == 200
-    r = await client.post("/projects", json=p2, headers={"X-Webauth-User": "user-2"})
+    r = await client.post("/api/projects", json=p2, headers={"X-Webauth-User": "user-2"})
     assert r.status_code == 200
-    r = await client.post("/projects", json=p3, headers={"X-Webauth-User": "user-3"})
+    r = await client.post("/api/projects", json=p3, headers={"X-Webauth-User": "user-3"})
     assert r.status_code == 200
-    r = await client.post("/projects", json=p4, headers={"X-Webauth-User": "user-4"})
+    r = await client.post("/api/projects", json=p4, headers={"X-Webauth-User": "user-4"})
     assert r.status_code == 200
 
 
@@ -39,7 +39,7 @@ async def test_create_projects_with_groups(client: AsyncClient) -> None:
 async def test_list_projects(client: AsyncClient) -> None:
     # user-5 should have access to TLA_P1 and TLA_P2 because because of common group membership
     r = await client.get(
-        "/projects", headers={"X-Webauth-User": "user-5", "X-Webauth-Groups": "group_a"}
+        "/api/projects", headers={"X-Webauth-User": "user-5", "X-Webauth-Groups": "group_a"}
     )
 
     v = r.json()
@@ -52,7 +52,7 @@ async def test_list_projects(client: AsyncClient) -> None:
 async def test_no_projects_visible_for_group(client: AsyncClient) -> None:
     # change the group membership of user-4 and see that there's no more projects visible
     r = await client.get(
-        "/projects", headers={"X-Webauth-User": "user-5", "X-Webauth-Groups": "group_e"}
+        "/api/projects", headers={"X-Webauth-User": "user-5", "X-Webauth-Groups": "group_e"}
     )
 
     v = r.json()
@@ -65,7 +65,7 @@ async def test_creator_but_wrong_groups_visible(client: AsyncClient) -> None:
     # this is for the case when you have a dedicated user which sets up projects, but is not
     # a member of the groups that the projects get set up for.
     r = await client.get(
-        "/projects", headers={"X-Webauth-User": "user-4", "X-Webauth-Groups": "group_e"}
+        "/api/projects", headers={"X-Webauth-User": "user-4", "X-Webauth-Groups": "group_e"}
     )
 
     v = r.json()
@@ -75,14 +75,14 @@ async def test_creator_but_wrong_groups_visible(client: AsyncClient) -> None:
 
 @pytest.mark.anyio
 async def test_update_project(client: AsyncClient) -> None:
-    r = await client.get("/projects/TLA_P2", headers={"X-Webauth-User": "user-2"})
+    r = await client.get("/api/projects/TLA_P2", headers={"X-Webauth-User": "user-2"})
 
     v = r.json()
 
     v["name"] = "naming things is a hard problem"
 
     r = await client.put(
-        "/projects/TLA_P2", json=v, headers={"X-Webauth-User": "user-2"}
+        "/api/projects/TLA_P2", json=v, headers={"X-Webauth-User": "user-2"}
     )
     assert r.status_code == 200
     d = r.json()
@@ -92,14 +92,14 @@ async def test_update_project(client: AsyncClient) -> None:
 
 @pytest.mark.anyio
 async def test_delete_project(client: AsyncClient) -> None:
-    r = await client.delete("/projects/TLA_P2", headers={"X-Webauth-User": "user-2"})
+    r = await client.delete("/api/projects/TLA_P2", headers={"X-Webauth-User": "user-2"})
     assert r.status_code == 200
 
-    r = await client.get("/projects/TLA_P2", headers={"X-Webauth-User": "user-2"})
+    r = await client.get("/api/projects/TLA_P2", headers={"X-Webauth-User": "user-2"})
     assert r.status_code == 404
 
 
 @pytest.mark.anyio
 async def test_delete_project_wrong_group(client: AsyncClient) -> None:
-    r = await client.delete("/projects/TLA_P4", headers={"X-Webauth-User": "user-2"})
+    r = await client.delete("/api/projects/TLA_P4", headers={"X-Webauth-User": "user-2"})
     assert r.status_code == 404

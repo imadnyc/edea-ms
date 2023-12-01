@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.db import async_session
-from app.db.models import User
+from edea_ms.db import async_session
+from edea_ms.db.models import User
 
 REQUEST_USER_CTX_KEY = "request_user"
 

@@ -31,7 +31,7 @@ def _resource_static_file(path: str, filename: str) -> FileResponse | Response:
 
     content = f.read_bytes()
     media_type = guess_type(path)[0] or "text/plain"
-    content_disposition_type = "attachment"
+    content_disposition_type = "inline"
 
     content_disposition_filename = quote(filename)
     content_disposition = (

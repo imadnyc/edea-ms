@@ -10,14 +10,41 @@ We're using and developing this at Fully Automated for our OSHW and consulting p
 
 ## Running it
 
-As we haven't released an official release yet, building and running it still requires a few dependencies like poetry and npm. With those installed it's just two commands:
+To make it as easy as possible to use, we've published a package on pypi which can just be installed like this:
+
+```sh
+pip install edea_ms
+# or with optional dependencies for rendering charts server-side
+pip install "edea_ms[optional]"
+```
+
+And it can be run locally like this:
+
+```sh
+python -m edea_ms --local
+```
+
+This starts a webserver which is only reachable on the local machine without any user authentication to keep it simple for single user installs or just trying it out. To set up authentication to collaborate with others in a team see the docs on [Authentication](https://edea-dev.gitlab.io/edea-ms/authentication.html).
+
+### Development
+
+To run the server from the repository, it needs both the backend and the frontend like this:
 
 ```sh
 # run the server
-poetry run uvicorn app.main:app --reload
+pdm run uvicorn edea_ms.main:app --reload
 
 # run the frontend
 npm run dev
+```
+
+## Building the package
+
+In case you want to bundle a modified frontend into your own package, simply run:
+
+```sh
+npm run build # this will compile the frontend to static files
+pdm build # to build the final wheel with the frontend embedded in it
 ```
 
 ## Measurement Client

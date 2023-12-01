@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.core.auth import CurrentUser
+from edea_ms.core.auth import CurrentUser
 
 router = APIRouter()
 

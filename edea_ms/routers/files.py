@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import delete, select
 
-from app.db import async_session, models
+from edea_ms.db import async_session, models
 
 router = APIRouter()
 

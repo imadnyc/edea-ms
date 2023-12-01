@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from app.core.authz import Role, has_roles
+from edea_ms.core.authz import Role, has_roles
 
 from ..db import DATABASE_URL
 

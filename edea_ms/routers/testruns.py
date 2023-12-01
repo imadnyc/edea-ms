@@ -14,14 +14,14 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.core.auth import CurrentUser
-from app.core.helpers import tr_unique_field, tryint
-from app.db import async_session, models
-from app.db.models import TestRunState
-from app.db.queries import common_project_ids
+from edea_ms.core.auth import CurrentUser
+from edea_ms.core.helpers import tr_unique_field, tryint
+from edea_ms.db import async_session, models
+from edea_ms.db.models import TestRunState
+from edea_ms.db.queries import common_project_ids
 
 with contextlib.suppress(ImportError):
-    import altair as alt  # type: ignore
+    import altair as alt
     import vl_convert as vlc  # type: ignore
 
 

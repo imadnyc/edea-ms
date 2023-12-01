@@ -1,6 +1,6 @@
 from typing import Any, Tuple
-from app.core.helpers import prj_unique_field
-from app.db import models
+from edea_ms.core.helpers import prj_unique_field
+from edea_ms.db import models
 
 
 from sqlalchemy import Select, and_, column, func, select, true

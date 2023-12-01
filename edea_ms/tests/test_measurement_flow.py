@@ -8,11 +8,6 @@ from edea_tmc.stepper import Stepper, StepResult, StepStatus  # type: ignore
 from httpx import AsyncClient
 
 
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
-
 def flexible_test_condition_generator(
     test_parameters: dict[str, list[Any]]
 ) -> list[dict[str, Any]]:

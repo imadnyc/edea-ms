@@ -57,4 +57,4 @@ async def no_auth_client() -> AsyncIterable[AsyncClient]:
 
 @pytest.fixture(scope="session")
 def docker_compose_file(pytestconfig: Any) -> str:
-    return os.path.join(str(pytestconfig.rootdir), "app", "tests", "docker-compose.yml")
+    return os.path.join(str(pytestconfig.rootdir), "edea_ms", "tests", "docker-compose.yml")

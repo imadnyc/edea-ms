@@ -5,10 +5,10 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 from sqlalchemy.ext.mutable import MutableList
 
-from app.core.auth import CurrentUser
-from app.core.helpers import prj_unique_field, tryint
-from app.db import async_session, models
-from app.db.queries import all_projects, single_project
+from edea_ms.core.auth import CurrentUser
+from edea_ms.core.helpers import prj_unique_field, tryint
+from edea_ms.db import async_session, models
+from edea_ms.db.queries import all_projects, single_project
 
 router = APIRouter()
 

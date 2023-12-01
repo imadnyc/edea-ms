@@ -6,10 +6,10 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 from sqlalchemy.exc import NoResultFound
 
-from app.core.auth import CurrentUser
-from app.db import async_session, models
-from app.routers.measurement_columns import MeasurementColumn
-from app.routers.testruns import TestRun
+from edea_ms.core.auth import CurrentUser
+from edea_ms.db import async_session, models
+from edea_ms.routers.measurement_columns import MeasurementColumn
+from edea_ms.routers.testruns import TestRun
 
 
 class MeasurementEntry(BaseModel):

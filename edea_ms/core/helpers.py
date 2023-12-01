@@ -1,4 +1,4 @@
-from app.db import models
+from edea_ms.db import models
 from sqlalchemy.orm import InstrumentedAttribute
 
 

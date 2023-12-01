@@ -4,8 +4,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 
-from app.core.auth import CurrentUser
-from app.db import async_session, models
+from edea_ms.core.auth import CurrentUser
+from edea_ms.db import async_session, models
 
 
 class MeasurementColumn(BaseModel):

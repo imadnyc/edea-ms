@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, params
 
-from app.core.auth import get_current_active_user
+from edea_ms.core.auth import get_current_active_user
 
 
 class Role(StrEnum):

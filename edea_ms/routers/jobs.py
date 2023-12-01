@@ -7,9 +7,9 @@ from sqlalchemy import and_
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.sql import select
 
-from app.core.auth import get_current_active_user
-from app.db import async_session, models
-from app.db.models import JobState, User
+from edea_ms.core.auth import get_current_active_user
+from edea_ms.db import async_session, models
+from edea_ms.db.models import JobState, User
 
 router = APIRouter()
 

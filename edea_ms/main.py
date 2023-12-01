@@ -9,8 +9,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import create_async_engine
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.core.auth import AuthenticationMiddleware
-from app.core.staticfiles import get_asset
+from edea_ms.core.auth import AuthenticationMiddleware
+from edea_ms.core.staticfiles import get_asset
 
 from .db.models import Model
 from .routers import (

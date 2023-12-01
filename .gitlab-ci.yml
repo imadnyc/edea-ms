@@ -45,8 +45,9 @@ default:
       if [ -f "$HOME/.cargo/env" ];
       then
         source "$HOME/.cargo/env"
-        poetry install
-        source $(poetry env info --path)/bin/activate
+        curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+        export PATH=/home/builder/.local/bin:$PATH
+        pdm install -G:all
         python3 --version # For debugging
       else
         echo "~/.cargo/env does not exist, assuming this is an included stage"
@@ -69,10 +70,10 @@ test-server:
   script:
     - npm install
     - npm run build
-    - playwright install
-    - coverage run --concurrency=thread,gevent -m pytest app
-    - coverage report
-    - coverage xml
+    - pdm run playwright install
+    - pdm run coverage run --concurrency=thread,gevent -m pytest edea_ms
+    - pdm run coverage report
+    - pdm run coverage xml
   coverage: "/(?i)total.*? (100(?:\\.0+)?\\%|[1-9]?\\d(?:\\.\\d+)?\\%)$/"
   artifacts:
     reports:
@@ -104,7 +105,7 @@ typecheck:
   image: registry.gitlab.com/edea-dev/ci-runner:latest
   stage: build
   script:
-    - mypy -p app
+    - pdm run mypy -p edea_ms
 pages:
   image: registry.gitlab.com/edea-dev/ci-runner:latest
   stage: deploy

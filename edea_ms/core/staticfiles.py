@@ -7,9 +7,14 @@ from fastapi import Response
 from fastapi.responses import FileResponse
 from starlette.config import Config
 
-config = Config(".env")
+try:
+    config = Config(".env")
+except FileNotFoundError:
+    config = Config()
+
 static_dir = config.get("STATIC_DIR", default="./static")
 has_static_dir = os.path.isdir(static_dir)
+
 
 def get_asset(path: str) -> FileResponse | Response:
     """

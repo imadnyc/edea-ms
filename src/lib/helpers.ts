@@ -9,7 +9,7 @@ export async function getTestRunData(fetch: (input: RequestInfo | URL, init?: Re
     const run = await fetch("/api/testruns/" + id)
         .then(response => {
             if (!response.ok) {
-                throw error(response.status, response.statusText);
+                error(response.status, response.statusText);
             }
             return response.json() as Promise<TestRun>;
         });
@@ -17,7 +17,7 @@ export async function getTestRunData(fetch: (input: RequestInfo | URL, init?: Re
     const measurements = await fetch("/api/testruns/measurements/" + run.id)
         .then(response => {
             if (!response.ok) {
-                throw error(response.status, response.statusText);
+                error(response.status, response.statusText);
             }
             return response.json() as Promise<Array<Row>>;
         });

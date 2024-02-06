@@ -32,7 +32,7 @@ export const load = (async ({ fetch, params }) => {
     const project = await fetch("/api/projects/" + params.slug)
         .then(response => {
             if (!response.ok) {
-                throw error(response.status, response.statusText)
+                error(response.status, response.statusText);
             }
             return response.json() as Promise<Project>
         });
@@ -41,14 +41,14 @@ export const load = (async ({ fetch, params }) => {
         testruns: fetch("/api/testruns/project/" + project.id)
             .then(response => {
                 if (!response.ok) {
-                    throw error(response.status, response.statusText)
+                    error(response.status, response.statusText);
                 }
                 return response.json() as Promise<TestRun[]>
             }),
         specifications: fetch("/api/specifications/project/" + project.id)
             .then(response => {
                 if (!response.ok) {
-                    throw error(response.status, response.statusText)
+                    error(response.status, response.statusText);
                 }
                 return response.json() as Promise<Specification[]>
             }),

@@ -16,7 +16,7 @@ export const load = (async ({ fetch, url }) => {
     const project = await fetch("/api/projects/" + project_id)
         .then(response => {
             if (!response.ok) {
-                throw error(response.status, response.statusText)
+                error(response.status, response.statusText);
             }
             return response.json() as Promise<Project>
         });

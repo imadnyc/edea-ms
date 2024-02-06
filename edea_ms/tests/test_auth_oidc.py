@@ -9,7 +9,7 @@ import nest_asyncio  # type: ignore
 import pytest
 import uvicorn
 from playwright.async_api import async_playwright, expect
-from pytest_docker.plugin import Services  # type: ignore
+from pytest_docker.plugin import Services
 
 from ..main import app
 from ..routers import auth_oidc

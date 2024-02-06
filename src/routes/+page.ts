@@ -9,7 +9,7 @@ export const load = (async ({ fetch, params }) => {
                 if (response.status == 401) {
                     return Promise.resolve<TestRun[]>([]);
                 } else if (!response.ok) {
-                    throw error(response.status, response.statusText)
+                    error(response.status, response.statusText);
                 } else {
                     return response.json() as Promise<TestRun[]>
                 }

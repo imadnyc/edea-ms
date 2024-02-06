@@ -15,7 +15,7 @@ def all_projects(user: models.User) -> Select[Tuple[models.Project]]:
         .distinct()
         .join_from(
             models.Project,
-            func.json_each(models.Project.groups).table_valued("value").alias("groups"),
+            func.json_each(models.Project.groups).table_valued(column("value")).alias("groups"),
             true(),
             isouter=True,
         )
@@ -36,7 +36,7 @@ def single_project(
         .distinct()
         .join_from(
             models.Project,
-            func.json_each(models.Project.groups).table_valued("value").alias("groups"),
+            func.json_each(models.Project.groups).table_valued(column("value")).alias("groups"),
             true(),
             isouter=True,
         )
@@ -58,7 +58,7 @@ def _common_project_ids(user: models.User) -> Select[Tuple[int]]:
         .distinct()
         .join_from(
             models.Project,
-            func.json_each(models.Project.groups).table_valued("value").alias("groups"),
+            func.json_each(models.Project.groups).table_valued(column("value")).alias("groups"),
             true(),
             isouter=True,
         )

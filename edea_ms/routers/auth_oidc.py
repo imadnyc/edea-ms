@@ -6,11 +6,14 @@ from starlette.responses import RedirectResponse
 
 router = APIRouter()
 
-config = Config(".env")
+try:
+    config = Config(".env")
+except FileNotFoundError:
+    config = Config()
 
 oauth = OAuth(config)
 _providers_str: str = config.get("OIDC_PROVIDERS", default="")
-providers = _providers_str.split(",") if "," in  _providers_str else [_providers_str]
+providers = _providers_str.split(",") if "," in _providers_str else [_providers_str]
 
 for provider in providers:
     if provider != "":
@@ -38,9 +41,7 @@ async def login(request: Request, provider: str) -> RedirectResponse:
 
     prov = getattr(oauth, p)
     try:
-        resp = await prov.authorize_redirect(
-            request, f"{config.get('API_BASE_URL')}/auth/{p}"
-        )
+        resp = await prov.authorize_redirect(request, f"{config.get('API_BASE_URL')}/auth/{p}")
         print(f"login redirect: {resp}")
         return resp
     except httpx.ConnectError as e:

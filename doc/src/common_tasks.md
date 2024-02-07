@@ -1,6 +1,6 @@
 # Common Tasks
 
-As edea-ms (and edea-tmc) are rather simple in terms of complexity, it can be a real headscratcher if one needs to do things which seem outside the box at first glance. The following are a few ideas how to solve some problems which we encountered ourselves while characterizing hardware.
+As edea-ms (and edea-tmc) are rather simple in terms of complexity, it can be a real head scratcher if one needs to do things which seem outside the box at first glance. The following are a few ideas how to solve some problems which we encountered ourselves while characterizing hardware.
 
 ## Postprocessing results
 

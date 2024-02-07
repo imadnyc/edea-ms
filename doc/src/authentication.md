@@ -1,7 +1,7 @@
 # Authentication
 
 The broad idea behind how edea-ms handles authentication and authorization is: do only what's absolutely necessary.
-Nowadays there's so many login providers and authentication solutions etc. that it's a fools errand to try and guess what
+Nowadays, there's so many login providers and authentication solutions etc. that it's a fools errand to try and guess what
 someone will use and try to support and maintain that solution. It's even worse when one thinks of whatever internal solutions
 have grown over time in some environments.
 
@@ -22,7 +22,7 @@ The following fields are supported:
 
 HTTP Header fields can either appear multiple times for roles and groups or can also be set to comma-separated values.
 
-Technically, only the username field is required because groups and roles default to empty. No groups being available means that every user will be able to see each project. As for roles it means no user will have special priviledges, so no admin actions can be performed via the UI or API.
+Technically, only the username field is required because groups and roles default to empty. No groups being available means that every user will be able to see each project. As for roles it means no user will have special privileges, so no admin actions can be performed via the UI or API.
 
 ## User roles
 

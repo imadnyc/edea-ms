@@ -15,7 +15,7 @@ At the beginning is always a new project.
 
 ### Existing project
 
-Search for existing project based on name or id. Not sure how many projects the average user will have, or how/if we should support the usecase of thousands of projects per instance.
+Search for existing project based on name or id. Not sure how many projects the average user will have, or how/if we should support the use case of thousands of projects per instance.
 
     ->  That's more for read-only projects in EDeA portal.
 
@@ -29,7 +29,7 @@ Another possibility would be to support checkpoints, defined transition states f
 
 ### Test run progress
 
-Currently no progress reporting is planned. May be implemented later once the forcing condition generator is built.
+Currently, no progress reporting is planned. May be implemented later once the forcing condition generator is built.
 
 ### Test run results
 

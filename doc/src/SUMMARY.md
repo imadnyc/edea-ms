@@ -1,6 +1,6 @@
 # Summary
 
-- [Introduction](./introduction.md)
+- [Introduction](./index.md)
 - [Authentication](./authentication.md)
 - [User Workflows](./user_workflow.md)
 - [Measurement Data Storage](./measurement_data_storage.md)

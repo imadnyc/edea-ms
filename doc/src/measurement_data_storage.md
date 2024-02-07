@@ -1,6 +1,6 @@
 # Measurement Data Storage
 
-Storing measurement data comes with some unique issues, it's very heterogenous in a way that single data points can be a small numeric value to full blown images or even trace files many MB in size.
+Storing measurement data comes with some unique issues, it's very heterogeneous in a way that single data points can be a small numeric value to full-blown images or even trace files many MB in size.
 
 ## Strategies
 
@@ -12,7 +12,7 @@ The easy way.
 
 ### Object Storage
 
-Using a S3 compatible object store for storing and retreiving the files.
+Using a S3 compatible object store for storing and retrieving the files.
 
 Advantages:
 

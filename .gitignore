@@ -253,3 +253,5 @@ test.db
 # compiled frontend assets
 static/index.html
 static/_app
+
+doc/site

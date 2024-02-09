@@ -39,7 +39,7 @@ dev = [
     "trio",
     "mypy",
     "pytest-alembic",
-    "edea-tmc",
+    "edea-tmc>=0.2.0",
     "pydantic",
     "numpy",
     "gevent",

@@ -3,14 +3,12 @@ from typing import Any
 
 import numpy as np
 import pytest
-from edea_tmc.measurement_runner import MeasurementRunner  # type: ignore
+from edea_tmc.remote import AsyncMSRunner  # type: ignore
 from edea_tmc.stepper import Stepper, StepResult, StepStatus  # type: ignore
 from httpx import AsyncClient
 
 
-def flexible_test_condition_generator(
-    test_parameters: dict[str, list[Any]]
-) -> list[dict[str, Any]]:
+def flexible_test_condition_generator(test_parameters: dict[str, list[Any]]) -> list[dict[str, Any]]:
     """
     General-purpose test condition generator.
     """
@@ -28,7 +26,7 @@ class CurrentSink(Stepper):
     current_load = 0.0
 
     def __init__(self) -> None:
-        super().__init__([])
+        super().__init__()
 
     def setup(self) -> None:
         pass
@@ -37,7 +35,7 @@ class CurrentSink(Stepper):
         """Set load current in A"""
         self.current_load = set_point
 
-        return StepResult(status=StepStatus.success)
+        return StepResult(status=StepStatus.SUCCESS)
 
     def measurement_unit(self) -> str:
         return "A"
@@ -50,12 +48,12 @@ class VoltageSource(Stepper):
     voltage = 0.0
 
     def __init__(self) -> None:
-        super().__init__([])
+        super().__init__()
 
     def step(self, set_point: float) -> StepResult:
         self.voltage = set_point
 
-        return StepResult(status=StepStatus.success)
+        return StepResult(status=StepStatus.SUCCESS)
 
     def measurement_unit(self) -> str:
         return "V"
@@ -83,9 +81,7 @@ class VirtualDCDC(Stepper):
 
     def get_iin(self, vin: float, iout: float) -> float:
         pout = iout * self.set_vout
-        ploss = (
-            self.iq * vin + iout**2 * self.dcr
-        ) + iout * self.set_vout * self.switching_losses_factor
+        ploss = (self.iq * vin + iout ** 2 * self.dcr) + iout * self.set_vout * self.switching_losses_factor
         pin = pout + ploss
         return pin / vin
 
@@ -94,12 +90,9 @@ class VirtualDCDC(Stepper):
 
     def step(self, set_point: str | float) -> StepResult:
         if set_point == "i_in":
-            return StepResult(
-                StepStatus.success,
-                self.get_iin(self.source.get_voltage(), self.sink.get_current()),
-            )
+            return StepResult(StepStatus.SUCCESS, self.get_iin(self.source.get_voltage(), self.sink.get_current()), )
         else:
-            return StepResult(StepStatus.failed, None)
+            return StepResult(StepStatus.FAILED, None)
 
 
 @pytest.mark.asyncio
@@ -107,30 +100,16 @@ class TestMeasurementFlow:
     async def test_create_project(self, client: AsyncClient) -> None:
         r = await client.get("/api/projects/X5678")
         if r.status_code == 404:
-            r = await client.post(
-                "/api/projects",
-                json={
-                    "short_code": "X5678",
-                    "name": "test_project",
-                    "groups": ["group_a", "group_b"],
-                },
-            )
+            r = await client.post("/api/projects",
+                json={"short_code": "X5678", "name": "test_project", "groups": ["group_a", "group_b"], }, )
             assert r.status_code == 200
 
     async def test_measurement_run(self, client: AsyncClient) -> None:
-        runner = MeasurementRunner("http://test", "X5678", client=client)
+        runner = AsyncMSRunner("http://test", "X5678", client=client)
 
-        test_parameters = {
-            "Source_V": [3, 4, 5],
-            "Sink_I": np.concatenate(
-                (
-                    np.linspace(0.1, 1, 9),
-                    np.linspace(0.05, 0.01, 6),
-                    (np.logspace(0, 1, 10)),
-                )
-            ),
-            "DCDC": ["i_in"],
-        }
+        test_parameters = {"Source_V": [3, 4, 5],
+            "Sink_I": np.concatenate((np.linspace(0.1, 1, 9), np.linspace(0.05, 0.01, 6), (np.logspace(0, 1, 10)),)),
+            "DCDC": ["i_in"], }
 
         load = CurrentSink()
         voltage = VoltageSource()
@@ -141,13 +120,7 @@ class TestMeasurementFlow:
 
         conditions = flexible_test_condition_generator(test_parameters)
 
-        await runner.run(
-            conditions,
-            test_instruments,
-            "TR01",
-            "TEST_DEV",
-            "first test",
-        )
+        await runner.run(conditions, test_instruments, "TR01", "TEST_DEV", "first test", )
 
     async def test_get_run_results(self, client: AsyncClient) -> None:
         r = await client.get("/api/testruns/measurements/1")

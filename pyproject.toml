@@ -1,6 +1,6 @@
 [project]
 name = "edea_ms"
-version = "0.1.1"
+version = "0.1.2"
 description = "EDeA Measurement Server"
 authors = [{ name = "Elen Eisendle", email = "ln@calcifer.ee" }]
 license = { file = "LICENSE.txt" }

@@ -602,9 +602,9 @@ async def setup_testrun(
     # run a second tx to create the forcing conditions too
     async with async_session() as session:
         for step in setup.steps:
-            sequence_number = step["idx"]
+            sequence_number = step["sequence_number"]
             step_names = set(step.keys())
-            step_names.discard("idx")
+            step_names.discard("sequence_number")
             for name in step_names:
                 column = meas_cols[name]
                 fc = models.ForcingCondition(

@@ -83,7 +83,7 @@ api_prefix = "/api"
 app = FastAPI(
     title="EDeA Measurement Server",
     description=description,
-    version="0.1.1",
+    version="0.1.2",
     license_info={
         "name": "EUPL 1.2",
         "url": "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12",

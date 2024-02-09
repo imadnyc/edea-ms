@@ -17,7 +17,7 @@ def flexible_test_condition_generator(
 
     test_conditions = []
     for idx, e in enumerate(itertools.product(*test_parameters.values())):
-        d = {"idx": idx}
+        d = {"sequence_number": idx}
         for subindex, key in enumerate(test_parameters.keys()):
             d[key] = e[subindex]
         test_conditions.append(d)

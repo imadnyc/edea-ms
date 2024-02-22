@@ -1,6 +1,6 @@
 [project]
 name = "edea_ms"
-version = "0.1.2"
+version = "0.1.3"
 description = "EDeA Measurement Server"
 authors = [{ name = "Elen Eisendle", email = "ln@calcifer.ee" }]
 license = { file = "LICENSE.txt" }
@@ -20,8 +20,8 @@ dependencies = [
     "authlib>=1.3.0",
     "itsdangerous",
     "pyarrow",
-    "sqlalchemy[asyncio]>=2.0.25",
-    "uvicorn[standard]>=0.27.0.post1",
+    "sqlalchemy[asyncio]>=2.0.27",
+    "uvicorn[standard]>=0.27.1",
 ]
 
 [build-system]

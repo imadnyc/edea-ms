@@ -50,7 +50,7 @@
 		// only show actions which make sense. source and editor are available on the page
 		actions: { export: true, source: false, compiled: true, editor: false }
 	};
-	let vizOtions = writable(vo);
+	let vizOptions = writable(vo);
 
 	let documentValid = writable(false);
 	let hasTemporary = writable(data.testrun.data?.vega_lite_temp ? true : false);
@@ -179,7 +179,7 @@
 			}
 		});
 
-		vizOtions.update((o: EmbedOptions) => {
+		vizOptions.update((o: EmbedOptions) => {
 			o.theme = getModeAutoPrefers() ? undefined : 'dark';
 			return o;
 		});
@@ -192,7 +192,7 @@
 
 	modeCurrent.subscribe((val) => {
 		monaco.editor.setTheme(val ? 'vs' : 'vs-dark');
-		vizOtions.update((o: EmbedOptions) => {
+		vizOptions.update((o: EmbedOptions) => {
 			o.theme = val ? undefined : 'dark';
 			return o;
 		});
@@ -210,7 +210,7 @@
 		<div style="height: 100%;" bind:this={editorElement} />
 	</div>
 	<div class="">
-		<VegaLite data={vegaData} spec={$vizSpec} options={$vizOtions} />
+		<VegaLite data={vegaData} spec={$vizSpec} options={$vizOptions} />
 	</div>
 	<div class="col-span-2">
 		{#if $hasTemporary}<span class="chip variant-filled">Discard Temporary</span>{/if}

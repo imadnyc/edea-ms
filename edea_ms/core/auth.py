@@ -44,7 +44,7 @@ class SingleUser:
         roles: list[str] | None = None,
     ):
         if groups is None:
-            groups = ["defailt"]
+            groups = ["default"]
         if roles is None:
             roles = ["admin"]
         self.is_enabled = False

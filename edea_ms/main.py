@@ -11,7 +11,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from edea_ms.core.auth import AuthenticationMiddleware
 from edea_ms.core.staticfiles import get_asset
 from edea_ms.db import run_migrations
-
 from .routers import (
     auth_oidc,
     config,
@@ -35,7 +34,7 @@ tags_metadata = [
     {
         "name": "testrun",
         "description": "Used to batch related measurements (same board, same device) taken typically "
-        "without user-interaction. Used to store metadata about the DUT.",
+                       "without user-interaction. Used to store metadata about the DUT.",
     },
     {
         "name": "specification",

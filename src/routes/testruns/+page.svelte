@@ -17,9 +17,9 @@
 		columnDef('machine_hostname', 'Hostname'),
 		columnDef('user_name', 'User'),
 		columnDef('test_name', 'Test Name'),
-		columnDef('created_at', 'Created', { translate: (v) => new Date(v).toLocaleString('de-DE')}),
-		columnDef('started_at', 'Started', { translate: (v) => new Date(v).toLocaleString('de-DE')}),
-		columnDef('completed_at', 'Completed', { translate: (v) => new Date(v).toLocaleString('de-DE')}),
+		columnDef('created_at', 'Created', { translate: (v) => new Date(v).toLocaleString('de-DE') }),
+		columnDef('started_at', 'Started', { translate: (v) => new Date(v).toLocaleString('de-DE') }),
+		columnDef('completed_at', 'Completed', { translate: (v) => new Date(v).toLocaleString('de-DE') }),
 		columnDef('state', 'State', { translate: (v) => TestRunState[v] })
 	];
 

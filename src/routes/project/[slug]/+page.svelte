@@ -71,8 +71,10 @@
 
 <div class="container mx-auto p-8 space-y-8">
 	<h1 class="h1">
-		{data.project.name}{#if data.project.number}
-			({data.project.number}){/if}
+		{data.project.name}
+		{#if data.project.number}
+			({data.project.number})
+		{/if}
 	</h1>
 
 	<section class="space-y-2">

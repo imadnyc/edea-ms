@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { superForm, superValidateSync } from 'sveltekit-superforms/client';
-	// import SuperDebug from 'sveltekit-superforms/client/SuperDebug.svelte';
+	import { defaults, superForm } from 'sveltekit-superforms';
+	import { zod } from 'sveltekit-superforms/adapters';
 
 	// Props
 	/** Exposes parent props to this component. */
@@ -12,7 +12,7 @@
 
 	// Modal metadata, default to create modal but should also work as update form
 	const modalStore = getModalStore();
-	
+
 	const form_id = $modalStore[0].meta?.form_id || 'create-specification-form';
 	const project_id = $modalStore[0].meta?.project_id || $modalStore[0].meta?.row.project_id;
 	const row = $modalStore[0].meta?.row || undefined;
@@ -23,10 +23,10 @@
 	const cForm = 'border border-surface-500 p-4 space-y-4 rounded-container-token';
 
 	const { form, errors, enhance, constraints } = superForm(
-		superValidateSync(row, SpecificationSchema),
+		defaults(row, zod(SpecificationSchema)),
 		{
 			SPA: true,
-			validators: SpecificationSchema,
+			validators: zod(SpecificationSchema),
 			async onUpdate({ form }) {
 				if (form.valid) {
 					const d = await submitForm('specifications', form);
@@ -131,7 +131,7 @@
 		<footer class="modal-footer {parent.regionFooter}">
 			<button class="btn {parent.buttonPositive}">Submit</button>
 			<button class="btn {parent.buttonNeutral}" on:click={formClose}
-				>{parent.buttonTextCancel}</button
+			>{parent.buttonTextCancel}</button
 			>
 		</footer>
 	</form>

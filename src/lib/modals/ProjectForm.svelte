@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { superForm, superValidateSync } from 'sveltekit-superforms/client';
+	import { defaults, superForm } from 'sveltekit-superforms';
+	import { zod } from 'sveltekit-superforms/adapters';
 	import { ProjectSchema } from '$lib/schemas';
-	import { submitForm } from "$lib/helpers";
+	import { submitForm } from '$lib/helpers';
 
 	// Props
 	/** Exposes parent props to this component. */
@@ -25,9 +26,9 @@
 	const cHeader = 'text-2xl font-bold';
 	const cForm = 'border border-surface-500 p-4 space-y-4 rounded-container-token';
 
-	const { form, errors, enhance, constraints } = superForm(superValidateSync(row, ProjectSchema), {
+	const { form, errors, enhance, constraints } = superForm(defaults(row, zod(ProjectSchema)), {
 		SPA: true,
-		validators: ProjectSchema,
+		validators: zod(ProjectSchema),
 		async onUpdate({ form }) {
 			if (form.valid) {
 				const request_body = {
@@ -102,7 +103,7 @@
 			>
 				<option value="none">None</option>
 				{#each groups as group}
-					{#if row && row.groups.length > 0 && row.groups[0] == group}
+					{#if row && row.groups.length > 0 && row.groups[0] === group}
 						<option value={group} selected>{group}</option>
 					{:else}
 						<option value={group}>{group}</option>
@@ -113,7 +114,7 @@
 		<footer class="modal-footer {parent.regionFooter}">
 			<button class="btn {parent.buttonPositive}">Submit</button>
 			<button class="btn {parent.buttonNeutral}" type="button" on:click={formClose}
-				>{parent.buttonTextCancel}</button
+			>{parent.buttonTextCancel}</button
 			>
 		</footer>
 	</form>

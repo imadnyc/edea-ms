@@ -15,9 +15,10 @@
 		getDrawerStore,
 		initializeStores,
 		type ModalComponent,
-		autoModeWatcher
+		autoModeWatcher,
+		setInitialClassState
 	} from '@skeletonlabs/skeleton';
-	import { setContext } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { writable } from 'svelte/store';
 	import type { LayoutData } from './$types';
 
@@ -42,11 +43,15 @@
 		}
 	};
 
+	onMount(() => {
+		autoModeWatcher();
+	});
+
 	// store user information in a context
 	setContext('user', writable(data.user));
 </script>
 
-<svelte:head>{@html `<script>${autoModeWatcher.toString()} autoModeWatcher();</script>`}</svelte:head>
+<svelte:head>{@html '<script>(' + setInitialClassState.toString() + ')();</script>'}</svelte:head>
 
 <Drawer>
 	<Navigation />
@@ -93,9 +98,9 @@
 				>
 					GitLab
 				</a>
-				{#if data.user == undefined}
+				{#if data.user === undefined}
 					<a class="btn btn-sm variant-filled" href="/api/login/dex">Login</a>
-				{:else if data.user.subject != "single_user"}
+				{:else if data.user.subject !== "single_user"}
 					<a class="btn btn-sm variant-filled" href="/api/logout">Logout</a>
 				{/if}
 				<LightSwitch />

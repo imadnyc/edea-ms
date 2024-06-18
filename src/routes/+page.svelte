@@ -34,7 +34,7 @@
 </script>
 
 <svelte:head>
-    <title>EDeA-MS</title> 
+	<title>EDeA-MS</title>
 </svelte:head>
 
 
@@ -43,9 +43,9 @@
 		<h1 class="h1">Welcome to EDeA-MS</h1>
 		<p>
 			EDeA-MS provides the server part for Test&Measurement as Code setups. See <a
-				class="anchor"
-				href="https://tmc.edea.dev/">EDeA-TMC</a
-			> for the library.
+			class="anchor"
+			href="https://tmc.edea.dev/">EDeA-TMC</a
+		> for the library.
 		</p>
 	</section>
 	<section class="space-y-2">

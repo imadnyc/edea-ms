@@ -33,7 +33,7 @@
 				specifications.set($specifications);
 			} else {
 				const t: ToastSettings = {
-					message: 'An error occured: ' + response.statusText,
+					message: 'An error occurred: ' + response.statusText,
 					background: 'variant-filled-error',
 					timeout: 5000
 				};
@@ -41,7 +41,7 @@
 			}
 		} catch (error) {
 			const t: ToastSettings = {
-				message: 'An error occured while sending the request to the server: ' + error,
+				message: 'An error occurred while sending the request to the server: ' + error,
 				background: 'variant-filled-error',
 				autohide: false
 			};

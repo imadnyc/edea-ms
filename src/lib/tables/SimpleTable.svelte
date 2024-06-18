@@ -109,60 +109,60 @@
 	<div class="overflow-x-scroll">
 		<table class="table table-compact table-hover" bind:this={tableElement}>
 			<thead>
-				{#if columns}
+			{#if columns}
+				<tr>
+					{#each columns as column}
+						{#if column.sortable}
+							<Th {handler} orderBy={column.key}>{column.header}</Th>
+						{:else}
+							<th>{column.header}</th>
+						{/if}
+					{/each}
+				</tr>
+				{#if filterable}
 					<tr>
 						{#each columns as column}
-							{#if column.sortable}
-								<Th {handler} orderBy={column.key}>{column.header}</Th>
+							{#if column.filterable}
+								<ThFilter {handler} filterBy={column.key} />
 							{:else}
-								<th>{column.header}</th>
+								<th />
 							{/if}
 						{/each}
 					</tr>
-					{#if filterable}
-						<tr>
-							{#each columns as column}
-								{#if column.filterable}
-									<ThFilter {handler} filterBy={column.key} />
-								{:else}
-									<th />
-								{/if}
-							{/each}
-						</tr>
-					{/if}
 				{/if}
+			{/if}
 			</thead>
 			<tbody>
-				{#if columns}
-					{#each $rows as row, rowIndex}
-						<tr
-							on:click={(e) => {
+			{#if columns}
+				{#each $rows as row, rowIndex}
+					<tr
+						on:click={(e) => {
 								onRowClick(e, rowIndex);
 							}}
-							on:keydown={(e) => {
+						on:keydown={(e) => {
 								onRowKeydown(e, rowIndex);
 							}}
-							aria-rowindex={rowIndex + 1}
-						>
-							{#each columns as column, colIndex}
-								<td
-									class="!align-middle"
-									role="gridcell"
-									aria-colindex={colIndex + 1}
-									tabindex={colIndex === 0 ? 0 : -1}
-								>
-									{#if column.component}
-										<svelte:component this={column.component} {row} />
-									{:else if column.translate}
-										{column.translate(row[column.key])}
-									{:else}
-										{row[column.key]}
-									{/if}
-								</td>
-							{/each}
-						</tr>
-					{/each}
-				{/if}
+						aria-rowindex={rowIndex + 1}
+					>
+						{#each columns as column, colIndex}
+							<td
+								class="!align-middle"
+								role="gridcell"
+								aria-colindex={colIndex + 1}
+								tabindex={colIndex === 0 ? 0 : -1}
+							>
+								{#if column.component}
+									<svelte:component this={column.component} {row} />
+								{:else if column.translate}
+									{column.translate(row[column.key])}
+								{:else}
+									{row[column.key]}
+								{/if}
+							</td>
+						{/each}
+					</tr>
+				{/each}
+			{/if}
 			</tbody>
 		</table>
 	</div>

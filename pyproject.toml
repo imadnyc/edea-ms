@@ -1,6 +1,6 @@
 [project]
 name = "edea_ms"
-version = "0.1.3"
+version = "0.2.0"
 description = "EDeA Measurement Server"
 authors = [{ name = "Elen Eisendle", email = "ln@calcifer.ee" }]
 license = { file = "LICENSE.txt" }
@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 
 dependencies = [
-    "fastapi>=0.109.2",
+    "fastapi>=0.110.1",
     "aiosqlite",
     "httpx",
     "alembic",
@@ -20,8 +20,8 @@ dependencies = [
     "authlib>=1.3.0",
     "itsdangerous",
     "pyarrow",
-    "sqlalchemy[asyncio]>=2.0.27",
-    "uvicorn[standard]>=0.27.1",
+    "sqlalchemy[asyncio]>=2.0.29",
+    "uvicorn[standard]>=0.29.0",
 ]
 
 [build-system]
@@ -30,16 +30,19 @@ build-backend = "hatchling.build"
 
 
 [project.optional-dependencies]
-charts = ["altair", "vl-convert-python"]
+charts = [
+    "altair>=5.3.0",
+    "vl-convert-python>=1.4.0",
+]
 
-[tool.pdm.dev-dependencies]
-dev = [
+[tool.rye]
+dev-dependencies = [
     "pytest",
     "pytest-cov",
     "trio",
-    "mypy",
+    "mypy>=1.10.0",
     "pytest-alembic",
-    "edea-tmc>=0.2.1",
+    "edea-tmc>=0.2.2",
     "pydantic",
     "numpy",
     "gevent",
@@ -52,7 +55,7 @@ dev = [
     "playwright>=1.40.0",
     "pytest-asyncio>=0.21.0,<0.22",
     "mkdocs",
-    "mkdocs-material>=9.5.8",
+    "mkdocs-material>=9.5.17",
 ]
 
 sourcery = ["sourcery-cli"]

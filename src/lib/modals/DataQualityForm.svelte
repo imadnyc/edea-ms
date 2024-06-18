@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { superForm, superValidateSync } from 'sveltekit-superforms/client';
+	import { superForm, defaults } from 'sveltekit-superforms';
+	import { zod } from 'sveltekit-superforms/adapters';
 	import { DataQualitySchema } from '$lib/schemas';
 	import { submitFormObject } from '$lib/helpers';
 
@@ -30,10 +31,10 @@
 	const cForm = 'border border-surface-500 p-4 space-y-4 rounded-container-token';
 
 	const { form, errors, enhance, constraints } = superForm(
-		superValidateSync(row, DataQualitySchema),
+		defaults(row, zod(DataQualitySchema)),
 		{
 			SPA: true,
-			validators: DataQualitySchema,
+			validators: zod(DataQualitySchema),
 			async onUpdate({ form }) {
 				if (form.valid) {
 					const d = await submitFormObject(
@@ -129,7 +130,7 @@
 		<footer class="modal-footer {parent.regionFooter}">
 			<button class="btn {parent.buttonPositive}">Submit</button>
 			<button class="btn {parent.buttonNeutral}" type="button" on:click={formClose}
-				>{parent.buttonTextCancel}</button
+			>{parent.buttonTextCancel}</button
 			>
 		</footer>
 	</form>

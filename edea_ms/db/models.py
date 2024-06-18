@@ -48,7 +48,9 @@ class ProvidesProjectMixin:
 class ProvidesSpecificationMixin:
     "A mixin that adds a 'specification' relationship to classes."
 
-    specification_id: Mapped[int | None] = mapped_column(ForeignKey("specifications.id"))
+    specification_id: Mapped[int | None] = mapped_column(
+        ForeignKey("specifications.id")
+    )
 
     @declared_attr
     def specification(cls) -> Mapped["Specification"]:
@@ -145,7 +147,9 @@ class MeasurementColumn(Model, ProvidesProjectMixin, ProvidesSpecificationMixin)
     flags: Mapped[int | None] = mapped_column(default=0)
 
 
-class MeasurementEntry(Model, ProvidesTestRunColumnMixin, ProvidesMeasurementColumnMixin):
+class MeasurementEntry(
+    Model, ProvidesTestRunColumnMixin, ProvidesMeasurementColumnMixin
+):
     __tablename__ = "measurement_entries"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -156,11 +160,14 @@ class MeasurementEntry(Model, ProvidesTestRunColumnMixin, ProvidesMeasurementCol
     flags: Mapped[int | None] = mapped_column(default=0)
 
 
-class ForcingCondition(Model, ProvidesMeasurementColumnMixin, ProvidesTestRunColumnMixin):
+class ForcingCondition(
+    Model, ProvidesMeasurementColumnMixin, ProvidesTestRunColumnMixin
+):
     __tablename__: str = "forcing_conditions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     sequence_number: Mapped[int]
+    value_hidden: Mapped[bool] = mapped_column(default=False, server_default="0")
     numeric_value: Mapped[float | None]
     string_value: Mapped[str | None]
 
@@ -202,7 +209,9 @@ class TestrunFile(Model, ProvidesTestRunColumnMixin):
     filename: Mapped[str]
     content_type: Mapped[str]
     size: Mapped[int]
-    content: Mapped[bytes | None] = mapped_column(LargeBinary)  # if blob is none, filename must be a path or URL
+    content: Mapped[bytes | None] = mapped_column(
+        LargeBinary
+    )  # if blob is none, filename must be a path or URL
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     __mapper_args__ = {"eager_defaults": True}

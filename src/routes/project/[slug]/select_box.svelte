@@ -2,10 +2,10 @@
 	import { selected_ids } from './store';
 
 	export let row: any;
-	let has_viz = row.data?.vega_lite ? true : false;
+	let has_viz = !!row.data?.vega_lite;
 	let is_checked = false;
-    
-    // add or remove the id on selection change
+
+	// add or remove the id on selection change
 	function update_checklist() {
 		if (is_checked) {
 			selected_ids.update((s) => s.add(row.id));

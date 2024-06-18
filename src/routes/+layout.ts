@@ -7,6 +7,6 @@ export async function load({ fetch }) {
     const response = await fetch('/api/users/self');
 
 	return {
-		user: response.status == 200 ? await response.json() as Promise<User> : undefined
+		user: response.status == 200 ? await (await response.json() as Promise<User>) : undefined
 	};
 }

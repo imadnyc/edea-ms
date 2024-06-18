@@ -53,7 +53,7 @@
 	let vizOptions = writable(vo);
 
 	let documentValid = writable(false);
-	let hasTemporary = writable(data.testrun.data?.vega_lite_temp ? true : false);
+	let hasTemporary = writable(!!data.testrun.data?.vega_lite_temp);
 	let hasChanges = writable(false);
 
 	let spec: VisualizationSpec;
@@ -92,7 +92,7 @@
 
 	onMount(async () => {
 		self.MonacoEnvironment = {
-			getWorker: function (_: any, label: string) {
+			getWorker: function(_: any, label: string) {
 				if (label === 'json') {
 					return new jsonWorker();
 				}
@@ -218,7 +218,8 @@
 			<span class="chip variant-filled">Unsaved changes</span>
 		{:else}
 			<span class="chip variant-filled"
-				>Saved {#if $hasTemporary}as temporary{/if}</span
+			>Saved
+				{#if $hasTemporary}as temporary{/if}</span
 			>
 		{/if}
 	</div>

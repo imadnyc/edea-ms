@@ -1,15 +1,21 @@
 <script lang="ts">
 	// define all the props that get passed to a cell component
+	import { getContext } from 'svelte';
+
 	export let row: any;
 
 	import { Icon, Pencil, Trash } from 'svelte-hero-icons';
 
 	import type { ModalSettings, ToastSettings } from '@skeletonlabs/skeleton';
 	import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
-	import { projects, user } from './store';
+	import { projects } from './store';
+	import type { Writable } from 'svelte/store';
+	import type { User } from '$lib/models/models';
 
 	const modalStore = getModalStore();
 	const toastStore = getToastStore();
+
+	const user = getContext<Writable<User | undefined>>('user');
 
 	async function deleteSpecification(id: number) {
 		try {

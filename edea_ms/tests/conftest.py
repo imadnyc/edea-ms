@@ -3,10 +3,10 @@ import os
 from typing import Any, AsyncIterable
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from ..db import DATABASE_URL, override_db
+from ..db import DATABASE_URL, override_db, run_migrations
 from ..db.models import Model
 from ..main import app
 
@@ -38,20 +38,25 @@ async def setup_db() -> AsyncIterable[None]:
         await conn.run_sync(Model.metadata.create_all)
 
     override_db(engine)
+
+    await run_migrations()
+
     yield
 
 
 @pytest.fixture(scope="module")
 async def client() -> AsyncIterable[AsyncClient]:
+    transport = ASGITransport(app=app)  # type: ignore
     async with AsyncClient(
-        app=app, base_url="http://test", headers={"X-Webauth-User": "test-user"}
+            transport=transport, base_url="http://test", headers={"X-Webauth-User": "test-user"}
     ) as client:
         yield client
 
 
 @pytest.fixture(scope="module")
 async def no_auth_client() -> AsyncIterable[AsyncClient]:
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    transport = ASGITransport(app=app)  # type: ignore
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
 

@@ -10,7 +10,7 @@
 	export let data: PageData;
 
 	const vegaData = { measurements: data.measurements };
-	const hasVegaViz = data.testrun.data?.vega_lite ? true : false;
+	const hasVegaViz = !!data.testrun.data?.vega_lite;
 
 	import type { ModalSettings } from '@skeletonlabs/skeleton';
 	import { getModalStore } from '@skeletonlabs/skeleton';

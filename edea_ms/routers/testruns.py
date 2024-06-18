@@ -24,7 +24,6 @@ with contextlib.suppress(ImportError):
     import altair as alt
     import vl_convert as vlc  # type: ignore
 
-
 router = APIRouter()
 
 
@@ -55,6 +54,7 @@ class TestColumn(BaseModel):
     MeasurementColumn with a few fields omitted
     """
 
+    value_hidden: bool = False
     data_source: str | None = None
     description: str | None = None
     user_note: str | None = None
@@ -102,7 +102,7 @@ class WrappedIO:
 
 @router.get("/testruns", tags=["testrun"])
 async def get_all_testruns(
-    current_user: CurrentUser,
+        current_user: CurrentUser,
 ) -> List[TestRun]:
     async with async_session() as session:
         items: List[TestRun] = [
@@ -125,7 +125,7 @@ async def get_all_testruns(
 
 @router.get("/testruns/overview", tags=["testrun"])
 async def testruns_overview(
-    current_user: CurrentUser,
+        current_user: CurrentUser,
 ) -> List[TestRun]:
     """
     testruns_overview returns up to the five most recent testruns from the last 7 days.
@@ -152,7 +152,7 @@ async def testruns_overview(
 
 @router.get("/testruns/{ident}", tags=["testrun"])
 async def get_testrun(
-    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+        ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> TestRun:
     """
     Get a testrun by numeric id or short-code string
@@ -176,7 +176,7 @@ async def get_testrun(
 
 @router.get("/testruns/project/{ident}", tags=["testrun"])
 async def get_project_testruns(
-    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+        ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> list[TestRun]:
     """
     Retrieve all testruns for a project
@@ -235,9 +235,9 @@ async def create_testrun(new_run: NewTestRun, current_user: CurrentUser) -> Test
 
 @router.put("/testruns/{ident}", tags=["testrun"])
 async def update_testrun(
-    ident: Annotated[int | str, Depends(tryint)],
-    run: TestRun,
-    current_user: CurrentUser,
+        ident: Annotated[int | str, Depends(tryint)],
+        run: TestRun,
+        current_user: CurrentUser,
 ) -> TestRun:
     async with async_session() as session:
         cur = (
@@ -259,10 +259,10 @@ async def update_testrun(
 
 @router.put("/testruns/{ident}/field/{field_name}", tags=["testrun"])
 async def update_testrun_field(
-    ident: Annotated[int | str, Depends(tryint)],
-    field_name: str,
-    field_value: Annotated[str | int | list[Any] | dict[Any, Any] | None, Body()],
-    current_user: CurrentUser,
+        ident: Annotated[int | str, Depends(tryint)],
+        field_name: str,
+        field_value: Annotated[str | int | list[Any] | dict[Any, Any] | None, Body()],
+        current_user: CurrentUser,
 ) -> TestRun:
     async with async_session() as session:
         cur = (
@@ -290,9 +290,9 @@ async def update_testrun_field(
 
 @router.delete("/testruns/{ident}/field/{field_name}", tags=["testrun"])
 async def delete_testrun_field(
-    ident: Annotated[int | str, Depends(tryint)],
-    field_name: str,
-    current_user: CurrentUser,
+        ident: Annotated[int | str, Depends(tryint)],
+        field_name: str,
+        current_user: CurrentUser,
 ) -> Response:
     async with async_session() as session:
         cur = (
@@ -320,7 +320,7 @@ async def delete_testrun_field(
 
 @router.delete("/testruns/{ident}", tags=["testrun"])
 async def delete_testrun(
-    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+        ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> dict[str, int]:
     async with async_session() as session:
         cur = (
@@ -356,7 +356,7 @@ async def _get_testrun_df(run: models.TestRun) -> pl.DataFrame:
                 fc.string_value,
             )
             .join(mc, mc.id == fc.column_id)
-            .where(fc.testrun_id == run.id)
+            .where(and_(fc.testrun_id == run.id, fc.value_hidden == 0))
         )
 
         conditions = [list(e) for e in await session.execute(query_conditions)]
@@ -366,14 +366,28 @@ async def _get_testrun_df(run: models.TestRun) -> pl.DataFrame:
         cond_df = pl.DataFrame(conditions, schema=schema_cond).pivot(
             values=["string_value", "numeric_value"],
             index="sequence_number",
-            columns=["name", "unit"],
+            columns=["name"],
             aggregate_function="first",
         )
 
+        # drop columns which are all nulls
+        cond_df = cond_df[[s.name for s in cond_df if s.null_count() != cond_df.height]]
+
+        # strip field types from forcing condition column names, they're always either or
+        mapping = {
+            col: f'fc{col.removeprefix("string_value_name").removeprefix("numeric_value_name")}'
+            for col in cond_df.schema.keys()
+            if col.startswith("string_value_") or col.startswith("numeric_value_")
+        }
+
+        cond_df = cond_df.rename(mapping)
+
         query_measured_entries = (
             select(
-                me.numeric_value.label("me_numeric_value"),
-                me.string_value.label("me_string_value"),
+                mc.name,
+                me.sequence_number,
+                me.numeric_value,
+                me.string_value,
                 sp.name.label("sp_name"),
                 sp.minimum.label("sp_min"),
                 sp.typical.label("sp_typ"),
@@ -390,27 +404,33 @@ async def _get_testrun_df(run: models.TestRun) -> pl.DataFrame:
         schema_meas = {
             c.name: c.type.python_type for c in query_measured_entries.selected_columns
         }
-        meas_df = pl.DataFrame(measured_entries, schema=schema_meas)
+        meas_df = (
+            pl.DataFrame(measured_entries, schema=schema_meas)
+            .pivot(
+                values=["string_value", "numeric_value"],
+                index="sequence_number",
+                columns=["name"],
+                aggregate_function="first",
+            )
+            .drop("sequence_number")
+        )
 
-        df = pl.concat([cond_df, meas_df], how="horizontal")
-
-        # drop columns which are all nulls
-        df = df[[s.name for s in df if s.null_count() != df.height]]
+        meas_df = meas_df[[s.name for s in meas_df if s.null_count() != meas_df.height]]
 
         # strip field types from forcing condition column names, they're always either or
         mapping = {
-            col: f'fc{col.removeprefix("string_value").removeprefix("numeric_value")}'
-            for col in df.schema.keys()
+            col: f'mc{col.removeprefix("string_value_name").removeprefix("numeric_value_name")}'
+            for col in meas_df.schema.keys()
             if col.startswith("string_value_") or col.startswith("numeric_value_")
         }
 
-        df = df.rename(mapping)
+        meas_df = meas_df.rename(mapping)
 
-        return df
+        return pl.concat([cond_df, meas_df], how="horizontal")
 
 
 async def _get_user_testrun(
-    ident: str | int, current_user: CurrentUser
+        ident: str | int, current_user: CurrentUser
 ) -> models.TestRun:
     async with async_session() as session:
         run = (
@@ -434,10 +454,11 @@ async def _get_user_testrun(
 
 @router.get("/testruns/measurements/{ident}", tags=["testrun"])
 async def testrun_measurements(
-    ident: Annotated[int | str, Depends(tryint)],
-    current_user: CurrentUser,
-    data_format: DataExportFormat
-    | None = Query(default=DataExportFormat.JSON, alias="format"),
+        ident: Annotated[int | str, Depends(tryint)],
+        current_user: CurrentUser,
+        data_format: DataExportFormat | None = Query(
+            default=DataExportFormat.JSON, alias="format"
+        ),
 ) -> StreamingResponse:
     """
     This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
@@ -468,20 +489,21 @@ async def testrun_measurements(
 
     headers = {}
     if data_format != DataExportFormat.JSON:
-        headers[
-            "Content-Disposition"
-        ] = f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+        headers["Content-Disposition"] = (
+            f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+        )
 
     return StreamingResponse(f, headers=headers, media_type=media_type)
 
 
 @router.get("/testruns/plot/{ident}", tags=["testrun"])
 async def testrun_plot_charts(
-    ident: Annotated[int | str, Depends(tryint)],
-    current_user: CurrentUser,
-    data_format: ChartExportFormat
-    | None = Query(default=ChartExportFormat.SVG, alias="format"),
-    dpi: int = Query(default=150),
+        ident: Annotated[int | str, Depends(tryint)],
+        current_user: CurrentUser,
+        data_format: ChartExportFormat | None = Query(
+            default=ChartExportFormat.SVG, alias="format"
+        ),
+        dpi: int = Query(default=150),
 ) -> StreamingResponse:
     """
     This returns the results for a specific measurement run. It first retrieves the conditions, pivots them and then
@@ -530,18 +552,18 @@ async def testrun_plot_charts(
 
     headers = {}
     if data_format != DataExportFormat.JSON:
-        headers[
-            "Content-Disposition"
-        ] = f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+        headers["Content-Disposition"] = (
+            f'attachment; filename="{run.short_code}_{run.dut_id}.{data_format}"'
+        )
 
     return StreamingResponse(f, headers=headers, media_type=media_type)
 
 
 @router.post("/testruns/setup/{ident}", tags=["testrun"])
 async def setup_testrun(
-    ident: Annotated[int | str, Depends(tryint)],
-    setup: TestSetup,
-    current_user: CurrentUser,
+        ident: Annotated[int | str, Depends(tryint)],
+        setup: TestSetup,
+        current_user: CurrentUser,
 ) -> Response:
     unique_field = tr_unique_field(ident)
 
@@ -611,6 +633,7 @@ async def setup_testrun(
                     column_id=column.id,
                     testrun_id=run.id,
                     sequence_number=sequence_number,
+                    value_hidden=setup.columns[name].value_hidden,
                 )
                 target_value = step[name]
                 if isinstance(target_value, float):
@@ -636,10 +659,10 @@ async def setup_testrun(
 
 
 async def transition_state(
-    session: AsyncSession,
-    run_id: int | str,
-    to_state: TestRunState,
-    current_user: models.User,
+        session: AsyncSession,
+        run_id: int | str,
+        to_state: TestRunState,
+        current_user: models.User,
 ) -> models.TestRun:
     q = select(models.TestRun).where(
         and_(
@@ -668,7 +691,7 @@ async def transition_state(
 
 @router.put("/testruns/start/{ident}", tags=["testrun"])
 async def start_testrun(
-    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+        ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> TestRun:
     async with async_session() as session:
         cur = await transition_state(session, ident, TestRunState.RUNNING, current_user)
@@ -681,7 +704,7 @@ async def start_testrun(
 
 @router.put("/testruns/complete/{ident}", tags=["testrun"])
 async def complete_testrun(
-    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+        ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> TestRun:
     async with async_session() as session:
         cur = await transition_state(
@@ -696,7 +719,7 @@ async def complete_testrun(
 
 @router.put("/testruns/fail/{ident}", tags=["testrun"])
 async def fail_testrun(
-    ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
+        ident: Annotated[int | str, Depends(tryint)], current_user: CurrentUser
 ) -> TestRun:
     async with async_session() as session:
         cur = await transition_state(session, ident, TestRunState.FAILED, current_user)

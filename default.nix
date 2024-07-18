@@ -1,4 +1,4 @@
-with import <nixpkgs> {};
+{ pkgs, pdm, python3Packages }:
 
 pkgs.python3Packages.buildPythonPackage {
   name = "edea-ms";
@@ -18,5 +18,7 @@ pkgs.python3Packages.buildPythonPackage {
     itsdangerous
     pyarrow
     aiosqlite
+    aiofiles
+    python-multipart
   ];
 }

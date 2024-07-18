@@ -1,10 +1,22 @@
 with import <nixpkgs> {};
-with pkgs.python3Packages;
 
-buildPythonPackage rec {
+pkgs.python3Packages.buildPythonPackage {
   name = "edea-ms";
   src = ./.;
-  propagatedBuildInputs = [ pdm ];
 	format = "pyproject";
-	buildInputs = [ python3Packages.hatchling ];
+  propagatedBuildInputs = [ pdm python3Packages.uvicorn ];
+  nativeBuildInputs = with pkgs.python3Packages; [
+    hatchling
+    pyjwt
+    fastapi
+    sqlalchemy
+    alembic
+    authlib
+    httpx
+    polars
+    cryptography
+    itsdangerous
+    pyarrow
+    aiosqlite
+  ];
 }

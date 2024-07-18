@@ -18,6 +18,9 @@
             inherit pkgs;
             pdm = pkgs.pdm;
             python3Packages = pkgs.python3Packages;
+            buildNpmPackage = pkgs.buildNpmPackage;
+            lib = pkgs.lib;
+            fetchFromGitHub = pkgs.fetchFromGitHub;
           };
         };
 

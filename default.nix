@@ -7,23 +7,27 @@
 #   fetchFromGitHub
 # }:
 
-with import <nixpkgs> { };
+with import /home/a/son/nixpkgs { };
 
-let 
-frontend = buildNpmPackage rec {
-  pname = "edea-ms";
-  version = "0.2.0";
+let
+  frontend = buildNpmPackage rec {
+    pname = "edea-ms";
+    version = "0.2.0";
 
-  src = ./.;
-  
-  npmDepsHash = "sha256-eHjgyFEeLIpAfl5UG5AlhHRsH9Lt/oxPLOOMCLm6JZ0=";
+    src = ./.;
 
-  # The prepack script runs the build script, which we'd rather do in the build phase.
-  # npmPackFlags = [ "--ignore-scripts" ];
+    npmDepsHash = "sha256-eHjgyFEeLIpAfl5UG5AlhHRsH9Lt/oxPLOOMCLm6JZ0=";
 
-  # NODE_OPTIONS = "--openssl-legacy-provider";
-};
-  in
+    # The prepack script runs the build script, which we'd rather do in the build phase.
+    # npmPackFlags = [ "--ignore-scripts" ];
+
+    # NODE_OPTIONS = "--openssl-legacy-provider";
+    installPhase = ''
+      mkdir $out
+      cp -rv ./static $out
+    '';
+  };
+in
 pkgs.python3Packages.buildPythonPackage {
   name = "edea-ms";
   src = ./.;
@@ -31,7 +35,7 @@ pkgs.python3Packages.buildPythonPackage {
   propagatedBuildInputs = [
     pdm
     python3Packages.uvicorn
-    frontend
+    #frontend
   ];
   nativeBuildInputs = with pkgs.python3Packages; [
     aiofiles
@@ -49,4 +53,12 @@ pkgs.python3Packages.buildPythonPackage {
     pyarrow
     aiosqlite
   ];
+  postBuild = ''
+    cp -rv ${frontend}/static .
+    ls ./static
+    pwd
+  '';
+  postInstall = ''
+    #cp -rv ${frontend}/static $out
+  '';
 }

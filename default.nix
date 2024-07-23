@@ -7,7 +7,7 @@
 #   fetchFromGitHub
 # }:
 
-with import /home/a/son/nixpkgs { };
+with import /home/roland/nixpkgs { };
 
 let
   frontend = buildNpmPackage rec {
@@ -33,10 +33,12 @@ pkgs.python3Packages.buildPythonPackage {
   src = ./.;
   format = "pyproject";
   propagatedBuildInputs = [
-    pdm
+    # pdm
     python3Packages.uvicorn
     #frontend
   ];
+
+  build-system = [ python3.pkgs.pdm-backend ];
   nativeBuildInputs = with pkgs.python3Packages; [
     aiofiles
     python-multipart
@@ -53,12 +55,9 @@ pkgs.python3Packages.buildPythonPackage {
     pyarrow
     aiosqlite
   ];
-  postBuild = ''
+  preBuild = ''
     cp -rv ${frontend}/static .
     ls ./static
     pwd
   '';
-  postInstall = ''
-    #cp -rv ${frontend}/static $out
-  '';
-}
+} 

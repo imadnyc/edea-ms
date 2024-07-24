@@ -31,7 +31,7 @@
           makeWrapper = pkgs.makeWrapper;
         };
         
-        packages.default = self.packages.edea-ms;
+        packages.default = self.packages.${system}.edea-ms;
       }
     );
 }

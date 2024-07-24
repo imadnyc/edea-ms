@@ -29,7 +29,7 @@ let
   };
 in
 pkgs.python3Packages.buildPythonApplication rec {
-  name = "edea_ms";
+  name = "edea-ms";
   src = ./.;
   format = "pyproject";
   dependencies = with pkgs.python3Packages; [
@@ -67,7 +67,7 @@ pkgs.python3Packages.buildPythonApplication rec {
       rcoeurjoly
       amerino
     ];
-    mainProgram = "edea_ms";
+    mainProgram = "edea-ms";
     platforms = lib.platforms.linux;
   };
     

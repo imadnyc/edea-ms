@@ -103,4 +103,4 @@ artifacts = ["static/**/*"]
 allow-direct-references = true
 
 [project.scripts]
-edea_ms = "edea_ms.__main__:main"
+edea-ms = "edea_ms.__main__:main"

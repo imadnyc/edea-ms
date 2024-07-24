@@ -101,3 +101,6 @@ artifacts = ["static/**/*"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[project.scripts]
+edea_ms = "edea_ms.__main__:main"

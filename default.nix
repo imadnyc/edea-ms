@@ -28,18 +28,11 @@ let
     '';
   };
 in
-pkgs.python3Packages.buildPythonPackage {
-  name = "edea-ms";
+pkgs.python3Packages.buildPythonApplication rec {
+  name = "edea_ms";
   src = ./.;
   format = "pyproject";
-  propagatedBuildInputs = [
-    # pdm
-    python3Packages.uvicorn
-    #frontend
-  ];
-
-  build-system = [ python3.pkgs.pdm-backend ];
-  nativeBuildInputs = with pkgs.python3Packages; [
+  dependencies = with pkgs.python3Packages; [
     aiofiles
     python-multipart
     hatchling
@@ -54,10 +47,20 @@ pkgs.python3Packages.buildPythonPackage {
     itsdangerous
     pyarrow
     aiosqlite
+    uvicorn
   ];
+
+  build-system = [ python3.pkgs.pdm-backend ];
+  nativeBuildInputs = [ makeWrapper ];
   preBuild = ''
     cp -rv ${frontend}/static .
     ls ./static
     pwd
   '';
+
+  # postInstall = ''
+  # makeWrapper ${python3}/bin/python3 $out/bin/${name} \
+  # --add-flags "-m edea_ms --local"
+  # '';
+  
 } 

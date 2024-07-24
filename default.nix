@@ -53,10 +53,11 @@ pkgs.python3Packages.buildPythonApplication rec {
   build-system = [ python3.pkgs.pdm-backend ];
   nativeBuildInputs = [ makeWrapper ];
   preBuild = ''
-    cp -rv ${frontend}/static .
-    ls ./static
-    pwd
+    cp -r ${frontend}/static .
   '';
+
+  # Set the static dir to point to the generated frontend files
+  makeWrapperArgs = ["--set STATIC_DIR $out/${python3.sitePackages}/edea_ms/static"];
   
   meta = {
     description = "EDeA Measurement Server";

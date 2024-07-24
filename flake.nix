@@ -16,8 +16,7 @@
       in
       {
         devShell = pkgs.mkShell {
-          buildInputs = [
-          ];
+          inputsFrom = [ self.packages.${system}.default ];
         };
 
         packages.edea-ms = import ./default.nix {

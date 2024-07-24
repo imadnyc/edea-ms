@@ -56,9 +56,6 @@ pkgs.python3Packages.buildPythonApplication rec {
     cp -r ${frontend}/static .
   '';
 
-  # Set the static dir to point to the generated frontend files
-  makeWrapperArgs = ["--set STATIC_DIR $out/${python3.sitePackages}/edea_ms/static"];
-  
   meta = {
     description = "EDeA Measurement Server";
     homepage = "https://gitlab.com/edea-dev/edea-ms";

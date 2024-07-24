@@ -57,10 +57,18 @@ pkgs.python3Packages.buildPythonApplication rec {
     ls ./static
     pwd
   '';
-
-  # postInstall = ''
-  # makeWrapper ${python3}/bin/python3 $out/bin/${name} \
-  # --add-flags "-m edea_ms --local"
-  # '';
   
+  meta = {
+    description = "EDeA Measurement Server";
+    homepage = "https://gitlab.com/edea-dev/edea-ms";
+    license = lib.licenses.eupl12;
+    maintainers = with lib.maintainers; [
+      kiike
+      rcoeurjoly
+      amerino
+    ];
+    mainProgram = "edea_ms";
+    platforms = lib.platforms.linux;
+  };
+    
 } 

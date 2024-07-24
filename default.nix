@@ -1,13 +1,13 @@
-# {
-#   pkgs,
-#   pdm,
-#   python3Packages,
-#   buildNpmPackage,
-#   lib,
-#   fetchFromGitHub
-# }:
-
-with import /home/roland/nixpkgs { };
+{
+  pkgs,
+  pdm,
+  python3Packages,
+  buildNpmPackage,
+  lib,
+  fetchFromGitHub,
+  makeWrapper,
+  python3
+}:
 
 let
   frontend = buildNpmPackage rec {
